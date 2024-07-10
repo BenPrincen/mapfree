@@ -1,0 +1,21 @@
+name: Run Unit Tests
+on:
+  push:
+    branches:
+      - main
+      - bendev
+permissions:
+  contents: write
+jobs:
+  Release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Tools
+        run: |
+          sudo apt update
+          sudo apt install python3.8
+          pip install -r resources/requirements.txt
+      - name: Run Unit Tests
+        run: |
+          python run_test.py
