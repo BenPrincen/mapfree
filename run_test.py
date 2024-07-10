@@ -6,4 +6,8 @@ suite = loader.discover("lib/tests", pattern="test_*.py")
 
 # Run the test suite
 runner = unittest.TextTestRunner()
-runner.run(suite)
+output = runner.run(suite)
+
+# if any errors or failures then exit failure
+if (not output.errors) or (not output.failures):
+    exit(1)
