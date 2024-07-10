@@ -18,5 +18,4 @@ class TestUnprojectPoints(unittest.TestCase):
         # Project back to get points - should be equal
         for pt3, pt2 in zip(pts_3d, pts):
             proj_pt = self._camera.project(pt3)
-            print(proj_pt)
             np.testing.assert_almost_equal(proj_pt, pt2)
