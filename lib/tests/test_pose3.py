@@ -36,5 +36,5 @@ class TestPose3(unittest.TestCase):
         self.assertTrue(p0.almost_equal(p1))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

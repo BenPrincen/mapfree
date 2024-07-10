@@ -1,11 +1,13 @@
-''' 3D rotation '''
+""" 3D rotation """
+
 import math
 import numpy as np
 from scipy.spatial.transform import Rotation
 
+
 class Rot3(object):
     def __init__(self, R=np.eye(3)):
-        ''' Initialize from a 3x3 matrix (should be unitary!) '''
+        """Initialize from a 3x3 matrix (should be unitary!)"""
         self._rotation = R
 
     @property
@@ -17,10 +19,10 @@ class Rot3(object):
 
     @classmethod
     def Rx(cls, angle):
-        ''' Rot3 representing rotation about x axis
-            Input:
-                angle - angle in degrees
-        '''
+        """Rot3 representing rotation about x axis
+        Input:
+            angle - angle in degrees
+        """
         c = math.cos(np.radians(angle))
         s = math.sin(np.radians(angle))
         r = np.eye(3)
@@ -32,10 +34,10 @@ class Rot3(object):
 
     @classmethod
     def Ry(cls, angle):
-        ''' Rot3 representing rotation about y axis
-            Input:
-                angle - angle in degrees
-        '''
+        """Rot3 representing rotation about y axis
+        Input:
+            angle - angle in degrees
+        """
         c = math.cos(np.radians(angle))
         s = math.sin(np.radians(angle))
         r = np.eye(3)
@@ -47,10 +49,10 @@ class Rot3(object):
 
     @classmethod
     def Rz(cls, angle):
-        ''' Rot3 representing rotation about z axis
-            Input:
-                angle - angle in degrees
-        '''
+        """Rot3 representing rotation about z axis
+        Input:
+            angle - angle in degrees
+        """
         c = math.cos(np.radians(angle))
         s = math.sin(np.radians(angle))
         r = np.eye(3)
@@ -62,7 +64,7 @@ class Rot3(object):
 
     @classmethod
     def from_quaternion(cls, quat):
-        ''' Note: quat is in wxyz format '''
+        """Note: quat is in wxyz format"""
         # Change to xyzw format for scipy
         qxyzw = np.roll(quat, -1)
         r = Rotation.from_quat(qxyzw)
@@ -70,7 +72,7 @@ class Rot3(object):
         return cls(R=r)
 
     def __mul__(self, m):
-        ''' Multiply works for either a Rot3, or a vector '''
+        """Multiply works for either a Rot3, or a vector"""
         if isinstance(m, Rot3):
             m = np.dot(self.matrix, m.matrix)
             return Rot3(R=m)
