@@ -9,5 +9,5 @@ runner = unittest.TextTestRunner()
 output = runner.run(suite)
 
 # if any errors or failures then exit failure
-if (not output.errors) or (not output.failures):
+if output.errors or output.failures:
     exit(1)
