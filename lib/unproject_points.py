@@ -1,5 +1,5 @@
 import numpy as np
-from lib.camera import Camera
+from .camera import Camera
 
 
 def unproject_points(pts, depth_image, camera, depth_scale=1000):
