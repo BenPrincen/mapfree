@@ -23,28 +23,28 @@ class MickeyEvalSession:
         learning_config: str,
         checkpoint: str = "",
     ) -> None:
-        self.config = config
-        self.checkpoint = checkpoint
-        self.output_path = "runs/"
-        self.use_cuda = torch.cuda.is_available()
-        self.device = torch.device("cuda:0" if self.use_cuda else "cpu")
-        self.data = None
+        self._config = config
+        self._checkpoint = checkpoint
+
+        use_cuda = torch.cuda.is_available()
+        self._device = torch.device("cuda:0" if use_cuda else "cpu")
+
         if os.path.exists(learning_config):
-            self.config.merge_from_file(learning_config)
+            self._config.merge_from_file(learning_config)
         else:
             logging.warning(
                 f"Learning config file not found at {learning_config}, Skipping."
             )
-        self.model = build_model(config, checkpoint)
+        self._model = build_model(config, checkpoint)
 
-    def data_to_cpu(self, data: dict):
+    def _data_to_cpu(self, data: dict):
         for k, v in data.items():
             if torch.is_tensor(v):
                 data[k] = v.detach().cpu()
             if k == "inliers_list":
                 data[k] = [i.detach().cpu() for i in data[k]]
 
-    def print_memory_usage(self):
+    def _print_memory_usage(self):
         t = torch.cuda.get_device_properties(0).total_memory
         r = torch.cuda.memory_reserved(0)
         a = torch.cuda.memory_allocated(0)
@@ -60,7 +60,7 @@ class MickeyEvalSession:
         for data in tqdm(dataloader):
             data = data_to_model_device(data, self.model)
             with torch.no_grad():
-                R_batched, t_batched = self.model(data)
+                R_batched, t_batched = self._model(data)
 
             for i_batch in range(len(data["scene_id"])):
                 # refer_fname = data["pair_names"][0][i_batch]
@@ -73,6 +73,7 @@ class MickeyEvalSession:
                 if np.isnan(R).any() or np.isnan(t).any() or np.isinf(t).any():
                     continue
 
+                rot = Rot3(R)
                 estimated_pose = Pose3(  # change to use local Pose class, make tuple with query image
                     q=mat2quat(R).reshape(-1),
                     t=t.reshape(-1),
