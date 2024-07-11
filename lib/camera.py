@@ -5,6 +5,7 @@ import numpy as np
 
 
 class Camera(object):
+
     def __init__(self, fx, fy, px, py, width, height):
         """Construct simple linear camera.
         Inputs:

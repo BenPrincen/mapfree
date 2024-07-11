@@ -6,6 +6,7 @@ from scipy.spatial.transform import Rotation
 
 
 class Rot3(object):
+
     def __init__(self, R=np.eye(3)):
         """Initialize from a 3x3 matrix (should be unitary!)"""
         self._rotation = R

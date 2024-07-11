@@ -1,29 +1,16 @@
-from benchmark.metrics import MetricManager, Inputs
-from benchmark.utils import (
-    load_poses,
-    subsample_poses,
-    load_K,
-    precision_recall,
-    convert_world2cam_to_cam2world,
-)
-from lib.misc.utils import (
-    read_intrinsics,
-    read_color_image,
-    compute_scene_metrics,
-    Pose,
-)
-from lib.datasets.datamodules import DataModule
-from lib.datasets.utils import correct_intrinsic_scale
-from lib.models.builder import build_model
-from lib.utils.data import data_to_model_device
 from transforms3d.quaternions import mat2quat
 
 from collections import defaultdict
+from lib.utils.data import data_to_model_device
+from lib.models.builder import build_model
+from lib.pose3 import Pose3
+from lib.rot3 import Rot3
 import logging
 import numpy as np
 import os
 from pathlib import Path
 import torch
+from torch.utils.data import DataLoader
 from typing import Tuple
 from tqdm import tqdm
 from yacs.config import CfgNode as CN
@@ -34,7 +21,6 @@ class MickeyEvalSession:
         self,
         config: CN,
         learning_config: str,
-        mapfree_config: str = "../config/datasets/mapfree.yaml",
         checkpoint: str = "",
     ) -> None:
         self.config = config
@@ -49,28 +35,7 @@ class MickeyEvalSession:
             logging.warning(
                 f"Learning config file not found at {learning_config}, Skipping."
             )
-        if os.path.exists(mapfree_config):
-            self.config.merge_from_file(mapfree_config)
-        else:
-            logging.warning(
-                f"Dataset config file not found at {mapfree_config}, Skipping."
-            )
         self.model = build_model(config, checkpoint)
-
-    def calculateMatrics(self, results: dict, dataset_path: Path) -> dict:
-        scenes = tuple(f.name for f in dataset_path.iterdir() if f.is_dir())
-        for scene in scenes:
-            pose = results[scene]
-            K, W, H = load_K(dataset_path / scene / "intrinsics.txt")
-            with (dataset_path / scene / "poses.txt").open(
-                "r", encoding="utf-8"
-            ) as gt_poses_file:
-                gt_poses = load_poses(gt_poses_file, load_confidence=False)
-
-            q, t = convert_world2cam_to_cam2world(pose.q, pose.t)
-
-            poses = {}
-            poses[int(pose.image_name[-9:-4])] = ()
 
     def data_to_cpu(self, data: dict):
         for k, v in data.items():
@@ -89,9 +54,8 @@ class MickeyEvalSession:
         print(f"memory allocated: {a}")
         print(f"free memory: {f}\n")
 
-    def runModel(self, dataloader: DataModule) -> Tuple[dict, dict]:
+    def _runModel(self, dataloader: DataLoader) -> dict:
         estimated_poses = defaultdict(list)
-        pair_data = defaultdict(list)
 
         for data in tqdm(dataloader):
             data = data_to_model_device(data, self.model)
@@ -109,18 +73,16 @@ class MickeyEvalSession:
                 if np.isnan(R).any() or np.isnan(t).any() or np.isinf(t).any():
                     continue
 
-                estimated_pose = Pose(
-                    image_name=query_img,
+                estimated_pose = Pose3(  # change to use local Pose class, make tuple with query image
                     q=mat2quat(R).reshape(-1),
                     t=t.reshape(-1),
                     inliers=inliers,
                 )
-                self.data_to_cpu(data)
 
                 estimated_poses[scene].append(estimated_pose)
-                pair_data[scene].append(data["inliers_list"])
+                # pair_data[scene].append(data)
 
-        return estimated_poses, pair_data
+        return estimated_poses
 
     def runOnPair(
         self,
@@ -194,30 +156,21 @@ class MickeyEvalSession:
     def runOnSequence(self, dataset_split: str):
         pass
 
-    def runOnDataset(self, dataset_path: str, dataset_split: str):
+    # assuming validation dataset right now
+    def runOnDataset(self, dataloader: DataLoader) -> dict:
+        """Run MicKey on the entire mapfree validation dataset
 
-        # assert os.path.exists(Path(dataset_path) / dataset_split)
+        Parameters:
+        dataloader -- The torch Dataloader containing the mapfree validation dataset
 
-        self.config.DATASET.DATA_ROOT = dataset_path
-        self.dataloader = None
+        Returns:
+        Dictionary with keys being the scene id (string) and the values being a tuple.
+        The first element in the tuple is a Pose3 representing the estimated pose.
+        The second element in the tuple is a string containing the name of the query image.
+        """
 
-        if dataset_split == "test":
-            self.config.TRAINING.BATCH_SIZE = 8
-            self.config.TRAINING.NUM_WORKERS = 8
-            self.dataloader = DataModule(
-                self.config, drop_last_val=False
-            ).test_dataloader()
-        elif dataset_split == "val":
-            self.config.TRAINING.BATCH_SIZE = 16
-            self.config.TRAINING.NUM_WORKERS = 8
-            self.dataloader = DataModule(
-                self.config, drop_last_val=False
-            ).val_dataloader()
-        else:
-            raise NotImplemented(f"Invalid split: {dataset_split}")
-
-        estimated_poses, pair_data = self.runModel(self.dataloader)
-        return estimated_poses, pair_data
+        estimated_poses = self._runModel(dataloader)
+        return estimated_poses
 
 
 class MapFreeResult:

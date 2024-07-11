@@ -6,6 +6,7 @@ from .rot3 import Rot3
 
 
 class Pose3(object):
+
     def __init__(self, R=Rot3(), T=np.zeros(3)):
         """Initialize from a Rot3 and a Translation"""
         self._rotation = R
