@@ -73,15 +73,9 @@ class MickeyEvalSession:
                 if np.isnan(R).any() or np.isnan(t).any() or np.isinf(t).any():
                     continue
 
-                rot = Rot3(R)
-                estimated_pose = Pose3(  # change to use local Pose class, make tuple with query image
-                    q=mat2quat(R).reshape(-1),
-                    t=t.reshape(-1),
-                    inliers=inliers,
-                )
-
+                r = Rot3(R)
+                estimated_pose = (Pose3(r, t), inliers, query_img)
                 estimated_poses[scene].append(estimated_pose)
-                # pair_data[scene].append(data)
 
         return estimated_poses
 
@@ -167,7 +161,8 @@ class MickeyEvalSession:
         Returns:
         Dictionary with keys being the scene id (string) and the values being a tuple.
         The first element in the tuple is a Pose3 representing the estimated pose.
-        The second element in the tuple is a string containing the name of the query image.
+        The second element is a float containing the number of inliers.
+        The third element is a string containing the name of the query image.
         """
 
         estimated_poses = self._runModel(dataloader)

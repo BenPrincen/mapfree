@@ -33,7 +33,7 @@ class Pose3(object):
         return Pose3(R=Rot3(R=m_inv[:3, :3]), T=m_inv[:3, 3])
 
     def __mul__(self, m):
-        """Overload * operator so it work for multiplying 2 Pose3's or
+        """Overload * operator so it works for multiplying 2 Pose3's or
         multiplying a Pose3 times a 3D point
         """
         if isinstance(m, Pose3):
