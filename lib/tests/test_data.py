@@ -37,6 +37,8 @@ class TestDataLoader(unittest.TestCase):
         self.assertEqual(sample["T_0to1"].shape, (4, 4))
         self.assertEqual(sample["K_color0"].shape, (3, 3))
         self.assertEqual(sample["K_color1"].shape, (3, 3))
+        self.assertEqual(sample["depth0"].shape, (720, 540))
+        self.assertEqual(sample["depth1"].shape, (720, 540))
 
     def test_dataloader(self):
         dataset = MapFreeDataset(self.config, "val")
@@ -53,6 +55,8 @@ class TestDataLoader(unittest.TestCase):
             self.assertEqual(data["T_0to1"].squeeze().shape, (4, 4))
             self.assertEqual(data["K_color0"].squeeze().shape, (3, 3))
             self.assertEqual(data["K_color1"].squeeze().shape, (3, 3))
+            self.assertEqual(data["depth0"].squeeze().shape, (720, 540))
+            self.assertEqual(data["depth1"].squeeze().shape, (720, 540))
             counter += 1
 
         self.assertEqual(counter, 3)

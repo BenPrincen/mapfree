@@ -7,6 +7,7 @@ import numpy as np
 from transforms3d.quaternions import qinverse, qmult, rotate_vector, quat2mat
 from lib.dataset.utils import (
     read_color_image,
+    read_depth_image,
     correct_intrinsic_scale,
 )
 
@@ -16,6 +17,7 @@ class MapFreeScene(data.Dataset):
     def __init__(
         self,
         scene_root,
+        scene_depth_root,
         resize,
         sample_factor=1,
         overlap_limits=None,
@@ -25,6 +27,7 @@ class MapFreeScene(data.Dataset):
         super().__init__()
 
         self.scene_root = Path(scene_root)
+        self.scene_depth_root = Path(scene_depth_root)
         self.resize = resize
         self.sample_factor = sample_factor
         self.transforms = transforms
@@ -121,13 +124,21 @@ class MapFreeScene(data.Dataset):
         seqA, imgA, seqB, imgB = pair
         return (f"seq{seqA}/frame_{imgA:05}.jpg", f"seq{seqB}/frame_{imgB:05}.jpg")
 
+    def get_mickey_depth_pair_path(self, pair):
+        seqA, imgA, seqB, imgB = pair
+        return (
+            f"seq{seqA}/frame_{imgA:05}.mickey.png",
+            f"seq{seqB}/frame_{imgB:05}.mickey.png",
+        )
+
     def __len__(self):
         return len(self.pairs)
 
     def __getitem__(self, index):
         # image paths (relative to scene_root)
         im1_path, im2_path = self.get_pair_path(self.pairs[index])
-
+        depth1_path, depth2_path = self.get_mickey_depth_pair_path(self.pairs[index])
+        print("Depth path: {}", depth1_path)
         # load color images
         image1 = read_color_image(
             self.scene_root / im1_path, self.resize, augment_fn=self.transforms
@@ -135,7 +146,8 @@ class MapFreeScene(data.Dataset):
         image2 = read_color_image(
             self.scene_root / im2_path, self.resize, augment_fn=self.transforms
         )
-
+        depth1 = read_depth_image(self.scene_depth_root / depth1_path)
+        depth2 = read_depth_image(self.scene_depth_root / depth2_path)
         # get absolute pose of im0 and im1
         if self.test_scene:
             t1, t2, c1, c2 = np.zeros([3]), np.zeros([3]), np.zeros([3]), np.zeros([3])
@@ -166,6 +178,8 @@ class MapFreeScene(data.Dataset):
         data = {
             "image0": image1,  # (3, h, w)
             "image1": image2,
+            "depth0": depth1,  # (1, h, w)
+            "depth1": depth2,
             "T_0to1": T,  # (4, 4)  # relative pose
             "abs_q_0": q1,
             "abs_c_0": c1,
@@ -191,6 +205,7 @@ class MapFreeDataset(data.ConcatDataset):
         assert mode in ["train", "val", "test"], "Invalid dataset mode"
 
         data_root = Path(cfg.DATASET.DATA_ROOT) / mode
+        depth_root = Path(cfg.DATASET.DEPTH_ROOT) / mode
         resize = (cfg.DATASET.WIDTH, cfg.DATASET.HEIGHT)
 
         if mode == "test":
@@ -216,6 +231,7 @@ class MapFreeDataset(data.ConcatDataset):
         data_srcs = [
             MapFreeScene(
                 data_root / scene,
+                depth_root / scene,
                 resize,
                 sample_factor,
                 overlap_limits,
