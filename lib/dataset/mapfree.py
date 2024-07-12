@@ -138,7 +138,6 @@ class MapFreeScene(data.Dataset):
         # image paths (relative to scene_root)
         im1_path, im2_path = self.get_pair_path(self.pairs[index])
         depth1_path, depth2_path = self.get_mickey_depth_pair_path(self.pairs[index])
-        print("Depth path: {}", depth1_path)
         # load color images
         image1 = read_color_image(
             self.scene_root / im1_path, self.resize, augment_fn=self.transforms
