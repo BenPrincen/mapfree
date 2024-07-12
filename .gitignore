@@ -3,6 +3,5 @@ __pycache__
 *.ckpt
 *.zip
 *.pyc
-*.png
 .vscode
 data
