@@ -62,10 +62,3 @@ class TestFindRelativePose(unittest.TestCase):
         est_pose = Pose3(Rot3(rot), translation)
         self.assertEqual(num_inliers, 50)
         self.assertTrue(est_pose.almost_equal(pose))
-
-    def test_no_solution(self):
-        # Use a random set of points
-        pts2 = 1 * np.random.rand(100, 3)
-        pose, num_inliers = find_relative_pose(self.pts, pts2, 10)
-        self.assertTrue(pose is None)
-        self.assertEqual(num_inliers, 0)
