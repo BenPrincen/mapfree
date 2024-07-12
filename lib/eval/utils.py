@@ -1,6 +1,7 @@
 from transforms3d.quaternions import mat2quat
 
 from collections import defaultdict
+from lib.dataset.mapfree import MapFreeDataset
 from lib.utils.data import data_to_model_device
 from lib.models.builder import build_model
 from lib.pose3 import Pose3
@@ -24,7 +25,6 @@ class MickeyEvalSession:
         checkpoint: str = "",
     ) -> None:
         self._config = config
-        self._checkpoint = checkpoint
 
         use_cuda = torch.cuda.is_available()
         self._device = torch.device("cuda:0" if use_cuda else "cpu")
@@ -35,7 +35,11 @@ class MickeyEvalSession:
             logging.warning(
                 f"Learning config file not found at {learning_config}, Skipping."
             )
-        self._model = build_model(config, checkpoint)
+
+        if os.path.exists(checkpoint):
+            self._model = build_model(config, checkpoint)
+        else:
+            logging.warning(f"Checkpoint ")
 
     def _data_to_cpu(self, data: dict):
         for k, v in data.items():
@@ -60,6 +64,9 @@ class MickeyEvalSession:
         for data in tqdm(dataloader):
             data = data_to_model_device(data, self.model)
             with torch.no_grad():
+                # data needed to run model
+                # image0 and image1 (tensors)
+                #
                 R_batched, t_batched = self._model(data)
 
             for i_batch in range(len(data["scene_id"])):
@@ -79,80 +86,12 @@ class MickeyEvalSession:
 
         return estimated_poses
 
-    def runOnPair(
-        self,
-        query_img: str,
-        ref_img: str,
-        intrinsics_path: str,
-        resize=None,
-    ) -> None:
-
-        # gather data and run on model
-        K, W, H = load_K(Path("../data/val/s00462") / "intrinsics.txt")
-        data = {}
-        im0 = read_color_image(ref_img, resize).to(self.device)
-        im1 = read_color_image(query_img, resize).to(self.device)
-        data["image0"] = im0
-        data["image1"] = im1
-
-        frame_nums = [int(query_img[-9:-4]), int(ref_img[-9:-4])]
-        for i in frame_nums:
-            data["K_color" + str(i)] = (
-                torch.from_numpy(K[i]).unsqueeze(0).to(self.device)
-            )
-
-        self.model(data)
-        self.data = data
-
-        gt_poses_path = os.path.join(
-            query_img, "..", "..", "poses.txt"
-        )  # assume img in seq folder
-        estimated_poses_path = os.path.join(query_img, "..", "..", "poses_device.txt")
-
-        estimated_poses_path = os.path.abspath(estimated_poses_path)
-        gt_poses_path = os.path.abspath(gt_poses_path)
-
-        if os.path.exists(gt_poses_path):
-            print("ground truth poses exist")
-        if os.path.exists(estimated_poses_path):
-            print("estimated poses exist")
-
-        with open(gt_poses_path, "r") as gt_poses_file:
-            gt_poses = load_poses(gt_poses_file, load_confidence=False)
-        with open(estimated_poses_path, "r") as estimated_poses_file:
-            estimated_poses = load_poses(estimated_poses_file, load_confidence=False)
-
-        metric_manager = MetricManager()
-        gt_poses = subsample_poses(gt_poses, subsample=5)
-        failures = 0
-        results = defaultdict(list)
-
-        # # calculate metrics
-        # for frame_num, (q_gt, t_gt, _) in gt_poses.items():
-        #     if frame_num not in estimated_poses:
-        #         failures += 1
-        #         continue
-
-        #     q_est, t_est = estimated_poses[frame_num]
-        #     inputs = Inputs(
-        #         q_gt=q_gt,
-        #         t_gt=t_gt,
-        #         q_est=q_est,
-        #         t_est=t_est,
-        #         confidence=confidence,
-        #         K=K[frame_num],
-        #         W=W,
-        #         H=H,
-        #     )
-        #     metric_manager(inputs, results)
-
-        return results, failures
-
-    def runOnSequence(self, dataset_split: str):
-        pass
+    # def runPairFromDataset(self, img_name: str, scene: str, dataset: MapFreeDataset, seq: str='seq1') -> dict:
+    #     for data in dataset:
+    #         if img_name == data['']
 
     # assuming validation dataset right now
-    def runOnDataset(self, dataloader: DataLoader) -> dict:
+    def run(self, dataloader: DataLoader) -> dict:
         """Run MicKey on the entire mapfree validation dataset
 
         Parameters:

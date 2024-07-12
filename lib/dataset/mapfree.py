@@ -212,8 +212,6 @@ class MapFreeDataset(data.ConcatDataset):
             elif mode == "val":
                 scenes = scenes[:10]
 
-        print(len(scenes))
-
         # Init dataset objects for each scene
         data_srcs = [
             MapFreeScene(
