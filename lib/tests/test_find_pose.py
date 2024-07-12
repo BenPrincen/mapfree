@@ -62,3 +62,23 @@ class TestFindRelativePose(unittest.TestCase):
         est_pose = Pose3(Rot3(rot), translation)
         self.assertEqual(num_inliers, 50)
         self.assertTrue(est_pose.almost_equal(pose))
+
+    def test_no_solution(self):
+        # Use a random set of points
+        pts1 = np.array(
+            [
+                [0.59264685, 0.45509163, 0.0580761],
+                [0.98222345, 0.21555882, 0.05149344],
+                [0.95044737, 0.76716756, 0.60736922],
+            ]
+        )
+        pts2 = np.array(
+            [
+                [0.64608334, 0.80859981, 0.62765642],
+                [0.67547105, 0.71226312, 0.70516134],
+                [0.39264637, 0.74003262, 0.99620035],
+            ]
+        )
+        pose, num_inliers = find_relative_pose(pts1, pts2, 1)
+        self.assertTrue(pose is None)
+        self.assertEqual(num_inliers, 0)
