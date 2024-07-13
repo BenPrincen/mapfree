@@ -1,8 +1,10 @@
 __pycache__
 .ipynb_checkpoints
-*.ckpt
 *.zip
 *.pyc
 *.png
 .vscode
+weights
 data
+
+

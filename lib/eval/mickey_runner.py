@@ -17,14 +17,14 @@ from tqdm import tqdm
 from yacs.config import CfgNode as CN
 
 
-class MickeyEvalSession:
+class MicKeyRunner:
     def __init__(
         self,
-        config: CN,
         learning_config: str,
         checkpoint: str = "",
     ) -> None:
-        self._config = config
+        self._config = CN()
+        self._config.set_new_allowed(True)
 
         use_cuda = torch.cuda.is_available()
         self._device = torch.device("cuda:0" if use_cuda else "cpu")
@@ -37,32 +37,15 @@ class MickeyEvalSession:
             )
 
         if os.path.exists(checkpoint):
-            self._model = build_model(config, checkpoint)
+            self._model = build_model(self._config, checkpoint)
         else:
             logging.warning(f"Checkpoint ")
-
-    def _data_to_cpu(self, data: dict):
-        for k, v in data.items():
-            if torch.is_tensor(v):
-                data[k] = v.detach().cpu()
-            if k == "inliers_list":
-                data[k] = [i.detach().cpu() for i in data[k]]
-
-    def _print_memory_usage(self):
-        t = torch.cuda.get_device_properties(0).total_memory
-        r = torch.cuda.memory_reserved(0)
-        a = torch.cuda.memory_allocated(0)
-        f = r - a  # free inside reserved
-        print(f"total memory: {t}")
-        print(f"memory reserved: {r}")
-        print(f"memory allocated: {a}")
-        print(f"free memory: {f}\n")
 
     def _runModel(self, dataloader: DataLoader) -> dict:
         estimated_poses = defaultdict(list)
 
         for data in tqdm(dataloader):
-            data = data_to_model_device(data, self.model)
+            data = data_to_model_device(data, self._model)
             with torch.no_grad():
                 # data needed to run model
                 # image0 and image1 (tensors)
@@ -86,10 +69,6 @@ class MickeyEvalSession:
 
         return estimated_poses
 
-    # def runPairFromDataset(self, img_name: str, scene: str, dataset: MapFreeDataset, seq: str='seq1') -> dict:
-    #     for data in dataset:
-    #         if img_name == data['']
-
     # assuming validation dataset right now
     def run(self, dataloader: DataLoader) -> dict:
         """Run MicKey on the entire mapfree validation dataset
@@ -106,8 +85,3 @@ class MickeyEvalSession:
 
         estimated_poses = self._runModel(dataloader)
         return estimated_poses
-
-
-class MapFreeResult:
-    def __init__(self) -> None:
-        pass
