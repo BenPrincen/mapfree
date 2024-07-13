@@ -40,14 +40,14 @@ class TestFindRelativePose(unittest.TestCase):
         # Transform points - translation only test
         pose = Pose3(T=[0, 1, 1])
         pts2 = np.array([pose * p for p in self.pts])
-        (rot, translation), num_inliers = find_relative_pose(self.pts, pts2, 1)
+        (rot, translation), num_inliers = find_relative_pose(self.pts, pts2)
         est_pose = Pose3(Rot3(rot), translation)
         self.assertEqual(num_inliers, 100)
         self.assertTrue(est_pose.almost_equal(pose))
         # Test with rotation
         pose = Pose3(R=Rot3.Rx(45), T=[0, 0, 0])
         pts2 = np.array([pose * p for p in self.pts])
-        (rot, translation), num_inliers = find_relative_pose(self.pts, pts2, 1)
+        (rot, translation), num_inliers = find_relative_pose(self.pts, pts2)
         est_pose = Pose3(Rot3(rot), translation)
         self.assertEqual(num_inliers, 100)
         self.assertTrue(est_pose.almost_equal(pose))
@@ -58,7 +58,7 @@ class TestFindRelativePose(unittest.TestCase):
         pts2 = np.array([pose * p for p in self.pts])
         # Set some of the points to zeros
         pts2[pts2.shape[0] // 2 :, :] = np.zeros(3)
-        (rot, translation), num_inliers = find_relative_pose(self.pts, pts2, 100)
+        (rot, translation), num_inliers = find_relative_pose(self.pts, pts2)
         est_pose = Pose3(Rot3(rot), translation)
         self.assertEqual(num_inliers, 50)
         self.assertTrue(est_pose.almost_equal(pose))

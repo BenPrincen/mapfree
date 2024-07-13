@@ -57,7 +57,7 @@ def find_relative_pose(
     max_inliers = 0
     best_pose = None
     for it in range(0, ransac_iterations):
-        samples = np.random.choice(range(0, len(pts1)), num_matches)
+        samples = np.random.choice(range(0, len(pts1)), num_matches, replace=False)
         s1, s2 = pts1[samples], pts2[samples]
         # Solve
         R, t, _ = kabsch(s1, s2)
