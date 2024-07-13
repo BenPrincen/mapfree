@@ -19,4 +19,4 @@ jobs:
           pip install -r resources/requirements.txt
       - name: Run Unit Tests
         run: |
-          python run_test.py
+          python run_test.py --online
