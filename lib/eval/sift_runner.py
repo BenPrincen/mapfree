@@ -21,7 +21,7 @@ class SiftRunner(object):
         self._num_matches = self._config.SIFT.NUM_MATCHES
         self._min_num_matches = self._config.SIFT.MIN_NUM_MATCHES
 
-    def run_once(
+    def run_one(
         self, img1, img2, img1_depth, img2_depth, camera1, camera2
     ) -> Tuple[np.ndarray, np.ndarray, int]:
         """Run the algorithm on a pair of images"""

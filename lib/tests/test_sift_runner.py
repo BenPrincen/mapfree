@@ -9,7 +9,7 @@ class TestSiftRunner(unittest.TestCase):
         sift_runner = SiftRunner(config_path)
         self.assertTrue(isinstance(sift_runner, SiftRunner))
 
-    def test_run_once(self):
+    def test_run_one(self):
         pass
 
     def test_run(self):
