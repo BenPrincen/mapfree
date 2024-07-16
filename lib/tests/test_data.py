@@ -1,6 +1,5 @@
 from lib.dataset.mapfree import MapFreeDataset
 import unittest
-from lib.dataset.mapfree import MapFreeDataset
 import os
 from torch.utils.data import DataLoader
 from yacs.config import CfgNode as cfg
