@@ -59,12 +59,12 @@ class MicKeyRunner:
                 t = t_batched[i_batch].reshape(-1).detach().cpu().numpy()
                 inliers = data["inliers"][i_batch].item()
                 scene = data["scene_id"][i_batch]
-                query_img = data["pair_names"][1][i_batch]
+                frame_num = data["pair_names"][1][i_batch][-9:-4]
                 if np.isnan(R).any() or np.isnan(t).any() or np.isinf(t).any():
                     continue
 
                 r = Rot3(R)
-                estimated_pose = (Pose3(r, t), inliers, query_img)
+                estimated_pose = (Pose3(r, t), inliers, int(frame_num))
                 estimated_poses[scene].append(estimated_pose)
 
         return estimated_poses

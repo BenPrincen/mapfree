@@ -47,7 +47,7 @@ class TestMickeyRunner(unittest.TestCase):
 
         for k, v in estimated_poses.items():
             for pose_info in v:
-                pose, inliers, img = pose_info
+                pose, inliers, frame_num = pose_info
                 self.assertTrue(isinstance(pose, Pose3))
                 self.assertTrue(isinstance(inliers, float))
-                self.assertTrue(isinstance(img, str))
+                self.assertTrue(isinstance(frame_num, int))

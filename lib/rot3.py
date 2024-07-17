@@ -15,6 +15,9 @@ class Rot3(object):
     def matrix(self):
         return self._rotation
 
+    def getQuat(self):
+        return Rotation.from_matrix(self._rotation).as_quat()
+
     def inverse(self):
         return Rot3(R=self._rotation.transpose())
 
