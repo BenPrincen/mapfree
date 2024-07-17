@@ -20,6 +20,19 @@ class TestCamera(unittest.TestCase):
         self.assertEqual(camera.pp, (320, 240))
         self.assertEqual(camera.resolution, (640, 480))
 
+    def test_from_K(self):
+        K = np.zeros((3, 3))
+        K[0, 0] = 590
+        K[1, 1] = 590
+        K[0, 2] = 270
+        K[1, 2] = 360
+        K[2, 2] = 1
+        camera = Camera.from_K(K, 720, 540)
+        np.testing.assert_array_almost_equal(camera.K, K)
+        w, h = camera.resolution
+        self.assertEqual(720, w)
+        self.assertEqual(540, h)
+
     def test_project(self):
         camera = Camera(640, 480, 320, 240, 640, 480)
         # Point along principal axis

@@ -31,6 +31,10 @@ class Camera(object):
         fx = fy
         return cls(fx, fy, px, py, width, height)
 
+    @classmethod
+    def from_K(cls, K, width, height):
+        return cls(K[0, 0], K[1, 1], K[0, 2], K[1, 2], width, height)
+
     @property
     def ff(self):
         return self._ff
