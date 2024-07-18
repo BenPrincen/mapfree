@@ -75,7 +75,8 @@ class SiftRunner(object):
                 camera2,
                 depth_scale=1.0,
             )
-            result = (Pose3(Rot3(R), t), inliers, data["pair_names"][1])
+            frame_num = int(data["pair_names"][1][0][-9:-4])
+            result = (Pose3(Rot3(R), t), inliers, frame_num)
             scene = data["scene_id"][0]
             estimated_poses[scene].append(result)
         return estimated_poses
