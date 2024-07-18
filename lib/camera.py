@@ -1,6 +1,7 @@
 """ Simple linear camera """
 
 import math
+
 import numpy as np
 
 

@@ -1,11 +1,13 @@
-import unittest
 import os
-from lib.eval.sift_runner import SiftRunner
-from yacs.config import CfgNode as cfg
-from lib.dataset.mapfree import MapFreeDataset
-from lib.camera import Camera
+import unittest
+
 import numpy as np
 from torch.utils.data import DataLoader
+from yacs.config import CfgNode as cfg
+
+from lib.camera import Camera
+from lib.dataset.mapfree import MapFreeDataset
+from lib.eval.sift_runner import SiftRunner
 
 
 class TestSiftRunner(unittest.TestCase):
