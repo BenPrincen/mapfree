@@ -9,12 +9,12 @@ from lib.utils.reprojection import reprojection_error
 
 @dataclass
 class Inputs:
-    q_gt: np.array
-    t_gt: np.array
-    q_est: np.array
-    t_est: np.array
+    q_gt: np.ndarray
+    t_gt: np.ndarray
+    q_est: np.ndarray
+    t_est: np.ndarray
     confidence: float
-    K: np.array
+    K: np.ndarray
     W: int
     H: int
 
