@@ -1,16 +1,18 @@
-import numpy as np
 import os
-from yacs.config import CfgNode as CN
-from torch.utils.data import DataLoader
+from collections import defaultdict
 from typing import Tuple
+
+import numpy as np
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+from yacs.config import CfgNode as CN
+
+from lib.camera import Camera
 from lib.find_matches import find_keypoints, find_matches
 from lib.find_pose import find_relative_pose
-from lib.unproject_points import unproject_points
-from tqdm import tqdm
-from collections import defaultdict
-from lib.camera import Camera
 from lib.pose3 import Pose3
 from lib.rot3 import Rot3
+from lib.unproject_points import unproject_points
 
 
 class SiftRunner(object):

@@ -1,24 +1,15 @@
-from lib.gen_utils import load_poses, load_K
-from lib.dataset.mapfree import MapFreeDataset
-from lib.eval.mickey_runner import MicKeyRunner
-from pathlib import Path
-from lib.eval.eval import Eval
-import torch
-from torch.utils.data import DataLoader
-from yacs.config import CfgNode as CN
-from collections import defaultdict
-from lib.eval.mickey_runner import MicKeyRunner
-from lib.dataset.mapfree import MapFreeDataset
-from lib.pose3 import Pose3
-from lib.eval.utils import MetricManager, Inputs
 import os
-from pathlib import Path
-from torch.utils.data import DataLoader
 import unittest
+from pathlib import Path
+
+from torch.utils.data import DataLoader
 from yacs.config import CfgNode as cfg
-import torch
-import numpy as np
+
 from config.test.test_config import test_config
+from lib.dataset.mapfree import MapFreeDataset
+from lib.eval.eval import Eval
+from lib.eval.mickey_runner import MicKeyRunner
+from lib.gen_utils import load_K, load_poses
 
 
 @unittest.skipIf(test_config.ONLINE, "Should not run online")
@@ -62,13 +53,10 @@ class TestEval(unittest.TestCase):
             cls.config.DATASET.SCENES = None
             cls.config.DATASET.AUGMENTATION_TYPE = None
 
-            dataset = MapFreeDataset(cls.config, "val")
-            cls.loader = DataLoader(dataset, batch_size=1)
+            cls.dataset = MapFreeDataset(cls.config, "val")
+            cls.loader = DataLoader(cls.dataset, batch_size=1)
             cls.runner = MicKeyRunner(cls.cl_config_path, cls.checkpoint_path)
             cls.estimated_poses = cls.runner.run(cls.loader)
-            cls.gt_poses, cls.Ks, cls.Ws, cls.Hs = cls.collectGT(
-                "val", list(cls.estimated_poses.keys())
-            )
 
         else:
             cls.config = None
@@ -76,7 +64,5 @@ class TestEval(unittest.TestCase):
 
     def test_creation(self):
         self.assertTrue(self.estimated_poses)
-        eval = Eval.fromMapFree(
-            self.estimated_poses, self.gt_poses, self.Ks, self.Ws, self.Hs
-        )
+        eval = Eval.fromMapFree(self.estimated_poses, self.dataset)
         self.assertTrue(eval)

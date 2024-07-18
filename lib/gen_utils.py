@@ -1,9 +1,9 @@
-from pathlib import Path
-import typing
 import logging
+import typing
+from pathlib import Path
 
 import numpy as np
-from transforms3d.quaternions import qinverse, rotate_vector, qmult
+from transforms3d.quaternions import qinverse, qmult, rotate_vector
 
 VARIANTS_ANGLE_SIN = "sin"
 VARIANTS_ANGLE_COS = "cos"
@@ -48,6 +48,7 @@ def load_poses(file: typing.IO, load_confidence: bool = False):
                 logging.info(f"Ignoring comment line in {file.name} line {line_number}")
                 continue
             frame_num = int(name[-9:-4])
+            print(f"frame_number: {frame_num}")
         except ValueError:
             logging.warning(
                 f"Invalid frame number in file {file.name} line {line_number}."

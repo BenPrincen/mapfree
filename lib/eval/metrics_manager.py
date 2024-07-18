@@ -3,8 +3,8 @@ from typing import Callable
 
 import numpy as np
 
-from lib.utils.reprojection import reprojection_error
 from lib.gen_utils import VARIANTS_ANGLE_SIN, quat_angle_error
+from lib.utils.reprojection import reprojection_error
 
 
 @dataclass

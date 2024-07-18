@@ -1,22 +1,9 @@
-from lib.gen_utils import load_poses, load_K
-from lib.dataset.mapfree import MapFreeDataset
-from lib.eval.mickey_runner import MicKeyRunner
-from pathlib import Path
-import torch
-from torch.utils.data import DataLoader
-from yacs.config import CfgNode as CN
 from collections import defaultdict
-from lib.eval.mickey_runner import MicKeyRunner
+
+from transforms3d.quaternions import rotate_vector
+
 from lib.dataset.mapfree import MapFreeDataset
-from lib.pose3 import Pose3
-from lib.eval.utils import MetricManager, Inputs
-import os
-from pathlib import Path
-from torch.utils.data import DataLoader
-import unittest
-from yacs.config import CfgNode as cfg
-import torch
-import numpy as np
+from lib.eval.metrics_manager import Inputs, MetricManager
 
 
 class Eval:
@@ -27,6 +14,7 @@ class Eval:
         Ks: list,
         Ws: list,
         Hs: list,
+        confidence=False,
     ):
         """estimated_poses element format: (quaternion), (translation), confidence (optional)
         ground_truth_poses element format: (quaternion), (translation)
@@ -58,14 +46,7 @@ class Eval:
         return self._results
 
     @classmethod
-    def fromMapFree(
-        cls,
-        estimated_poses: dict,
-        ground_truth_poses: dict,
-        Ks: dict,
-        Ws: float,
-        Hs: float,
-    ):
+    def fromMapFree(cls, estimated_poses: dict, dataset: MapFreeDataset):
         """Inputs should be in mapfree format
         estimated_poses:
             keys: scene id's
@@ -75,36 +56,56 @@ class Eval:
             values: example of a list elem is [(quaternion), (translation)] without confidence
         """
 
-        def preprocessPosesIntrinsics(
-            estimated_poses: dict, gt_poses: dict, Ks: dict
-        ) -> dict:
+        def preprocessPosesIntrinsics(estimated_poses: dict) -> dict:
             new_estimated_poses = defaultdict(list)
-            new_gt_poses = defaultdict(list)
-            new_Ks = defaultdict(list)
             for k, v in estimated_poses.items():
                 for est_info in v:
                     pose3, conf, frame_num = est_info
                     q, t = pose3.rotation.getQuat().squeeze(), pose3.translation
                     new_estimated_poses[k].append((q, t, conf))
-                    q, t, _ = gt_poses[k][frame_num]
-                    new_gt_poses[k].append((q, t))
-                    new_Ks[k].append(Ks[k][frame_num])
-                    # print(f'pose3: {pose3}, conf: {conf}, frame_num: {frame_num}')
-                # est_info = [
-                #     [pose3.rotation.getQuat(), pose3.translation, conf] for pose3, conf, _ in v
-                # ]
-                # pose3, conf, _ = v
-                # new_estimated_poses[k] = est_info
-            return new_estimated_poses, new_gt_poses, new_Ks
+            return new_estimated_poses
+
+        def collectGTFromDataset(
+            dataset: MapFreeDataset, estimated_poses: dict
+        ) -> tuple:
+            """
+            1. loop through dataset
+            2. extract scene and frame number
+            3. check if scene and frame number exist in estimated poses, if so then extract that
+            """
+            gt_poses = defaultdict(list)
+            Ks = defaultdict(list)
+            Ws = defaultdict(list)
+            Hs = defaultdict(list)
+            for data in dataset:
+                frame_num = int(data["pair_names"][1][-9:-4])
+                print(f"frame number: {frame_num}")
+                scene = scene = data["scene_id"]
+
+                if scene in estimated_poses:
+                    print("got passed this")
+                    for pose in estimated_poses[scene]:
+                        _, _, pose_frame_num = pose
+                        print(f"pose frame num: {pose_frame_num}")
+                        if frame_num == pose_frame_num:
+                            print("got passed this too")
+                            # info to extract: quat, trans, K, W, H
+                            q = data["abs_q_1"]
+                            c = data["abs_c_1"]
+                            t = rotate_vector(-c, q)  # get translation
+                            gt_poses[scene].append((q, t))
+                            Ks[scene].append(data["K_color1"])
+                            Ws[scene].append(data["W"])
+                            Hs[scene].append(data["H"])
+            return gt_poses, Ks, Ws, Hs
 
         """est poses, gt poses, and ks have lists stored with each key
 
             merge lists 
         """
 
-        preprocessed_estimated_poses, preprocessed_gt_poses, preprocessed_ks = (
-            preprocessPosesIntrinsics(estimated_poses, ground_truth_poses, Ks)
-        )
+        preprocessed_estimated_poses = preprocessPosesIntrinsics(estimated_poses)
+        gt_poses, Ks, Ws, Hs = collectGTFromDataset(dataset, estimated_poses)
         list_est_poses = []
         list_gt_poses = []
         list_ks = []
@@ -112,12 +113,13 @@ class Eval:
         list_hs = []
         scenes = preprocessed_estimated_poses.keys()
         for scene in scenes:
-            print(f"K: {preprocessed_ks[scene]}")
             l = len(preprocessed_estimated_poses[scene])
             list_est_poses += preprocessed_estimated_poses[scene]
-            list_gt_poses += preprocessed_gt_poses[scene]
-            list_ks += preprocessed_ks[scene]
-            list_ws += [Ws[scene]] * l
-            list_hs += [Hs[scene]] * l
+            list_gt_poses += gt_poses[scene]
+            list_ks += Ks[scene]
+            list_ws += Ws[scene]
+            list_hs += Hs[scene]
 
-        return cls(list_est_poses, list_gt_poses, list_ks, list_ws, list_hs)
+        return cls(
+            list_est_poses, list_gt_poses, list_ks, list_ws, list_hs, confidence=True
+        )

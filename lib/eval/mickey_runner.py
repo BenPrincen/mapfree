@@ -1,20 +1,17 @@
-from transforms3d.quaternions import mat2quat
-
+import logging
+import os
 from collections import defaultdict
-from lib.dataset.mapfree import MapFreeDataset
-from lib.utils.data import data_to_model_device
+
+import numpy as np
+import torch
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+from yacs.config import CfgNode as CN
+
 from lib.models.builder import build_model
 from lib.pose3 import Pose3
 from lib.rot3 import Rot3
-import logging
-import numpy as np
-import os
-from pathlib import Path
-import torch
-from torch.utils.data import DataLoader
-from typing import Tuple
-from tqdm import tqdm
-from yacs.config import CfgNode as CN
+from lib.utils.data import data_to_model_device
 
 
 class MicKeyRunner:

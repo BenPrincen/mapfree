@@ -1,14 +1,16 @@
 # Code from Mickey repository https://github.com/nianticlabs/mickey
 
 from pathlib import Path
+
+import numpy as np
 import torch
 import torch.utils.data as data
-import numpy as np
-from transforms3d.quaternions import qinverse, qmult, rotate_vector, quat2mat
+from transforms3d.quaternions import qinverse, qmult, quat2mat, rotate_vector
+
 from lib.dataset.utils import (
+    correct_intrinsic_scale,
     read_color_image,
     read_depth_image,
-    correct_intrinsic_scale,
 )
 
 
@@ -40,7 +42,9 @@ class MapFreeScene(data.Dataset):
         self.poses = self.read_poses(self.scene_root)
 
         # read intrinsics
-        self.K, self.K_ori = self.read_intrinsics(self.scene_root, resize)
+        self.K, self.K_ori, self.W, self.H = self.read_intrinsics(
+            self.scene_root, resize
+        )
 
         # load pairs
         self.pairs = self.load_pairs(
@@ -65,7 +69,7 @@ class MapFreeScene(data.Dataset):
                 if resize is not None:
                     K = correct_intrinsic_scale(K, resize[0] / W, resize[1] / H)
                 Ks[img_name] = K
-        return Ks, K_ori
+        return Ks, K_ori, W, H
 
     @staticmethod
     def read_poses(scene_root: Path):
@@ -186,13 +190,17 @@ class MapFreeScene(data.Dataset):
             "image1": image2,
             "T_0to1": T,  # (4, 4)  # relative pose
             "abs_q_0": q1,
+            "abs_t_0": t1,
             "abs_c_0": c1,
             "abs_q_1": q2,
+            "abs_t_1": t2,
             "abs_c_1": c2,
             "K_color0": self.K[im1_path],  # (3, 3)
             "Kori_color0": self.K_ori[im1_path],  # (3, 3)
             "K_color1": self.K[im2_path],  # (3, 3)
             "Kori_color1": self.K_ori[im2_path],  # (3, 3)
+            "W": self.W,
+            "H": self.H,
             "dataset_name": "Mapfree",
             "scene_id": self.scene_root.stem,
             "scene_root": str(self.scene_root),
