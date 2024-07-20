@@ -47,7 +47,6 @@ class SiftRunner(object):
                 inlier_threshold=self._config.SIFT.INLIER_THRESHOLD,
                 num_matches=self._config.SIFT.NUM_MATCHES,
             )
-            print(result)
             if result is not None:
                 # unpack
                 (R, t), inliers = result
