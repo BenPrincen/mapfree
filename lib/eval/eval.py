@@ -79,16 +79,12 @@ class Eval:
             Hs = defaultdict(list)
             for data in dataset:
                 frame_num = int(data["pair_names"][1][-9:-4])
-                print(f"frame number: {frame_num}")
                 scene = scene = data["scene_id"]
 
                 if scene in estimated_poses:
-                    print("got passed this")
                     for pose in estimated_poses[scene]:
                         _, _, pose_frame_num = pose
-                        print(f"pose frame num: {pose_frame_num}")
                         if frame_num == pose_frame_num:
-                            print("got passed this too")
                             # info to extract: quat, trans, K, W, H
                             q = data["abs_q_1"]
                             c = data["abs_c_1"]

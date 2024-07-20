@@ -38,6 +38,7 @@ class MicKeyRunner:
         else:
             logging.warning(f"Checkpoint ")
 
+    # Note, this currently does not work well with a batch size greater than 1
     def _runModel(self, dataloader: DataLoader) -> dict:
         estimated_poses = defaultdict(list)
 
@@ -60,7 +61,7 @@ class MicKeyRunner:
                 if np.isnan(R).any() or np.isnan(t).any() or np.isinf(t).any():
                     continue
 
-                r = Rot3(R)
+                r = Rot3(R.squeeze())
                 estimated_pose = (Pose3(r, t), inliers, int(frame_num))
                 estimated_poses[scene].append(estimated_pose)
 
