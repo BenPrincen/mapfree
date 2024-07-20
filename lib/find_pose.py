@@ -69,7 +69,7 @@ def find_relative_pose(
         inliers = distances < inlier_threshold
         if inliers.sum() > max_inliers:
             best_pose = R, t
-            max_inliers = inliers.sum()
+            max_inliers = float(inliers.sum())
     if best_pose is not None:
         return best_pose, max_inliers
     else:
