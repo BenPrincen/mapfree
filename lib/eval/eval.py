@@ -61,7 +61,7 @@ class Eval:
             for k, v in estimated_poses.items():
                 for est_info in v:
                     pose3, conf, frame_num = est_info
-                    q, t = pose3.rotation.getQuat().squeeze(), pose3.translation
+                    q, t = pose3.rotation.get_quat().squeeze(), pose3.translation
                     new_estimated_poses[k].append((q, t, conf))
             return new_estimated_poses
 
