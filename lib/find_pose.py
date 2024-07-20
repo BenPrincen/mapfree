@@ -70,5 +70,7 @@ def find_relative_pose(
         if inliers.sum() > max_inliers:
             best_pose = R, t
             max_inliers = inliers.sum()
-
-    return best_pose, max_inliers
+    if best_pose is not None:
+        return best_pose, max_inliers
+    else:
+        return None

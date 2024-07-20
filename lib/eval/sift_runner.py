@@ -1,6 +1,6 @@
 import os
 from collections import defaultdict
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 from torch.utils.data import DataLoader
@@ -30,25 +30,30 @@ class SiftRunner(object):
 
     def run_one(
         self, img1, img2, img1_depth, img2_depth, camera1, camera2, depth_scale
-    ) -> Tuple[np.ndarray, np.ndarray, int]:
+    ) -> Optional[Tuple[np.ndarray, np.ndarray, int]]:
         """Run the algorithm on a pair of images"""
         kps = find_keypoints([img1, img2])
         kp1, des1 = kps[0]
         kp2, des2 = kps[1]
-        pts1, pts2 = find_matches(
-            kp1, des1, kp2, des2, self._config.SIFT.MIN_NUM_MATCHES
-        )
-        # TODO::: Need to handle the error case of insufficient matching points
-        pts1_3d = unproject_points(pts1, img1_depth, camera1, depth_scale)
-        pts2_3d = unproject_points(pts2, img2_depth, camera2, depth_scale)
-        (R, t), inliers = find_relative_pose(
-            pts1_3d,
-            pts2_3d,
-            ransac_iterations=self._config.SIFT.RANSAC_ITERATIONS,
-            inlier_threshold=self._config.SIFT.INLIER_THRESHOLD,
-            num_matches=self._config.SIFT.NUM_MATCHES,
-        )
-        return R, t, inliers
+        matches = find_matches(kp1, des1, kp2, des2, self._config.SIFT.MIN_NUM_MATCHES)
+        if matches is not None:
+            pts1, pts2 = matches
+            pts1_3d = unproject_points(pts1, img1_depth, camera1, depth_scale)
+            pts2_3d = unproject_points(pts2, img2_depth, camera2, depth_scale)
+            result = find_relative_pose(
+                pts1_3d,
+                pts2_3d,
+                ransac_iterations=self._config.SIFT.RANSAC_ITERATIONS,
+                inlier_threshold=self._config.SIFT.INLIER_THRESHOLD,
+                num_matches=self._config.SIFT.NUM_MATCHES,
+            )
+            print(result)
+            if result is not None:
+                # unpack
+                (R, t), inliers = result
+                return R, t, inliers
+        # Fall through error return
+        return None
 
     def run(self, data_loader: DataLoader) -> dict:
         estimated_poses = defaultdict(list)
@@ -66,7 +71,7 @@ class SiftRunner(object):
             camera2 = Camera.from_K(
                 data["K_color1"].numpy().squeeze(), img2.shape[1], img2.shape[0]
             )
-            R, t, inliers = self.run_one(
+            result = self.run_one(
                 img1,
                 img2,
                 data["depth0"].numpy().squeeze(),
@@ -75,8 +80,10 @@ class SiftRunner(object):
                 camera2,
                 depth_scale=1.0,
             )
-            frame_num = int(data["pair_names"][1][0][-9:-4])
-            result = (Pose3(Rot3(R), t), inliers, frame_num)
-            scene = data["scene_id"][0]
-            estimated_poses[scene].append(result)
+            if result is not None:
+                R, t, inliers = result
+                frame_num = int(data["pair_names"][1][0][-9:-4])
+                result = (Pose3(Rot3(R), t), inliers, frame_num)
+                scene = data["scene_id"][0]
+                estimated_poses[scene].append(result)
         return estimated_poses
