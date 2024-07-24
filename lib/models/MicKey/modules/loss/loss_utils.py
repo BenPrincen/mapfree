@@ -1,6 +1,9 @@
-import torch
 import math
-from lib.utils.metrics import vcre_loss
+
+import torch
+
+from lib.metric_utils import vcre_loss
+
 
 def compute_angular_error(R, t, Rgt_i, tgt_i):
     loss_rot, rot_err = rot_angle_loss(R, Rgt_i)
@@ -9,33 +12,39 @@ def compute_angular_error(R, t, Rgt_i, tgt_i):
     max_loss, _ = torch.max(torch.cat((loss_rot, loss_trans), dim=-1), dim=-1)
     return max_loss, loss_rot, loss_trans
 
+
 def compute_angular_error_weighted(R, t, Rgt_i, tgt_i, weights_t):
     loss_rot, rot_err = rot_angle_loss(R, Rgt_i)
     loss_trans, t_err = trans_ang_loss(t, tgt_i)
 
-    max_loss, _ = torch.max(torch.cat((loss_rot, loss_trans * weights_t), dim=-1), dim=-1)
+    max_loss, _ = torch.max(
+        torch.cat((loss_rot, loss_trans * weights_t), dim=-1), dim=-1
+    )
     return max_loss, loss_rot, loss_trans
+
 
 def ess_sq_euclidean_error(E, Egt):
 
     B = E.shape[0]
-    E_norm = E/E[:, 2, 2].view(B, 1, 1)
-    Egt_norm = Egt/Egt[:, 2, 2].view(B, 1, 1)
-    return torch.pow(E_norm-Egt_norm, 2).view(B, -1).sum(1)
+    E_norm = E / E[:, 2, 2].view(B, 1, 1)
+    Egt_norm = Egt / Egt[:, 2, 2].view(B, 1, 1)
+    return torch.pow(E_norm - Egt_norm, 2).view(B, -1).sum(1)
+
 
 def compute_pose_loss(R, t, Rgt_i, tgt_i, K=None, soft_clipping=True):
     loss_rot, rot_err = rot_angle_loss(R, Rgt_i)
     loss_trans = trans_l1_loss(t, tgt_i)
 
     if soft_clipping:
-        loss_trans_soft = torch.tanh(loss_trans/0.9) # xm ~ ?
-        loss_rot_soft = torch.tanh(loss_rot/0.9) # xrads=xdeg ~ ?
+        loss_trans_soft = torch.tanh(loss_trans / 0.9)  # xm ~ ?
+        loss_rot_soft = torch.tanh(loss_rot / 0.9)  # xrads=xdeg ~ ?
 
         loss = loss_rot_soft + loss_trans_soft
     else:
         loss = loss_rot + loss_trans
 
     return loss, loss_rot, loss_trans
+
 
 def compute_vcre_loss(R, t, Rgt_i, tgt_i, K=None, soft_clipping=True):
 
@@ -46,12 +55,13 @@ def compute_vcre_loss(R, t, Rgt_i, tgt_i, K=None, soft_clipping=True):
 
     loss = vcre_loss(R, t, Tgt, K)
     if soft_clipping:
-        loss = torch.tanh(loss/80)
+        loss = torch.tanh(loss / 80)
 
     loss_rot, rot_err = rot_angle_loss(R, Rgt_i)
     loss_trans = trans_l1_loss(t, tgt_i)
 
     return loss, loss_rot, loss_trans
+
 
 def trans_ang_loss(t, tgt):
     """Computes L1 loss for translation vector ANGULAR error
@@ -70,6 +80,7 @@ def trans_ang_loss(t, tgt):
     t_ang_err = torch.minimum(t_ang_err, math.pi - t_ang_err)
     return torch.abs(t_ang_err - torch.zeros_like(t_ang_err)), t_ang_err
 
+
 def trans_l1_loss(t, tgt):
     """Computes L1 loss for translation vector
     Input:
@@ -79,6 +90,7 @@ def trans_l1_loss(t, tgt):
     """
 
     return torch.abs(t - tgt).sum(-1)
+
 
 def rot_angle_loss(R, Rgt):
     """
@@ -103,5 +115,3 @@ def to_homogeneous_torch_batched(u_xys: torch.Tensor):
     ones = torch.ones((batch_size, 1, num_pts)).float().to(u_xys.device)
     u_xyhs = torch.concat([u_xys, ones], dim=1)
     return u_xyhs
-
-
