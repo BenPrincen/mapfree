@@ -47,12 +47,13 @@ class TestSiftRunner(unittest.TestCase):
         depth1 = data["depth1"].numpy()
         camera1 = Camera.from_K(data["K_color0"].numpy(), img1.shape[1], img1.shape[0])
         camera2 = Camera.from_K(data["K_color1"].numpy(), img2.shape[1], img2.shape[0])
-        R, t, inliers = sift_runner.run_one(
+        R, t, inliers, inc_pts1, inc_pts2 = sift_runner.run_one(
             img1, img2, depth0, depth1, camera1, camera2, depth_scale=1.0
         )
         self.assertEqual(R.shape, (3, 3))
         self.assertEqual(t.shape, (3,))
         self.assertTrue(inliers > 0)
+        self.assertEqual(inc_pts1.shape, inc_pts2.shape)
 
     def test_run(self):
         config_path = os.path.join("config/sift", "sift_config.yaml")

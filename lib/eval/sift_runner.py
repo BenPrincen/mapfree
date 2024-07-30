@@ -30,7 +30,7 @@ class SiftRunner(object):
 
     def run_one(
         self, img1, img2, img1_depth, img2_depth, camera1, camera2, depth_scale
-    ) -> Optional[Tuple[np.ndarray, np.ndarray, int]]:
+    ) -> Optional[Tuple[np.ndarray, np.ndarray, int, np.ndarray, np.ndarray]]:
         """Run the algorithm on a pair of images"""
         kps = find_keypoints([img1, img2])
         kp1, des1 = kps[0]
@@ -49,8 +49,8 @@ class SiftRunner(object):
             )
             if result is not None:
                 # unpack
-                (R, t), inliers = result
-                return R, t, inliers
+                (R, t), inliers, inc_pts1, inc_pts2 = result
+                return R, t, inliers, inc_pts1, inc_pts2
         # Fall through error return
         return None
 
@@ -80,7 +80,7 @@ class SiftRunner(object):
                 depth_scale=1.0,
             )
             if result is not None:
-                R, t, inliers = result
+                R, t, inliers, _, _ = result
                 frame_num = int(data["pair_names"][1][0][-9:-4])
                 result = (Pose3(Rot3(R), t), inliers, frame_num)
                 scene = data["scene_id"][0]

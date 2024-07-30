@@ -49,7 +49,8 @@ def find_relative_pose(
     pts1, pts2, ransac_iterations=100, inlier_threshold=0.15, num_matches=3
 ):
     """Find the relative pose between 3D pts1 and pts2.
-    Use Kabsch algorithm in a RANSAC loop
+    Use Kabsch algorithm in a RANSAC loop. Returns the best pose,
+    number of inliers, and the inlier points
     """
     if len(pts1) != len(pts2):
         raise AttributeError("Length of points don't match")
@@ -67,10 +68,14 @@ def find_relative_pose(
         distances = np.sqrt(np.sum((pts2 - tx_pts1) ** 2, axis=-1))
         # Count inliers below threshold
         inliers = distances < inlier_threshold
+        inliers_idx = np.nonzero(distances < inlier_threshold)
         if inliers.sum() > max_inliers:
             best_pose = R, t
             max_inliers = float(inliers.sum())
+            # Save the inlier points
+            inc_pts1 = pts1[inliers_idx]
+            inc_pts2 = pts2[inliers_idx]
     if best_pose is not None:
-        return best_pose, max_inliers
+        return best_pose, max_inliers, inc_pts1, inc_pts2
     else:
         return None
