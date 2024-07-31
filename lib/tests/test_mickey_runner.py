@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 import unittest
 from yacs.config import CfgNode as cfg
 from config.test.test_config import test_config
+from lib.camera import Camera
 
 
 @unittest.skipIf(test_config.ONLINE, "Should not run online")
@@ -29,14 +30,14 @@ class TestMickeyRunner(unittest.TestCase):
             cls.config.DATASET.SCENES = None
             cls.config.DATASET.AUGMENTATION_TYPE = None
 
-            dataset = MapFreeDataset(cls.config, "val")
-            cls.loader = DataLoader(dataset, batch_size=1)
+            cls.dataset = MapFreeDataset(cls.config, "val")
+            cls.loader = DataLoader(cls.dataset, batch_size=1)
 
         else:
             cls.config = None
             cls.loader = None
 
-    def test_runner(self):
+    def test_run(self):
         runner = MicKeyRunner(self.cl_config_path, self.checkpoint_path)
         self.assertTrue(runner)
         self.assertTrue(self.config)
@@ -51,3 +52,17 @@ class TestMickeyRunner(unittest.TestCase):
                 self.assertTrue(isinstance(pose, Pose3))
                 self.assertTrue(isinstance(inliers, float))
                 self.assertTrue(isinstance(frame_num, int))
+
+    def test_run_one(self):
+        data = self.dataset[0]
+        camera1 = Camera.from_K(data["K_color0"], data["W"], data["H"])
+        camera2 = Camera.from_K(data["K_color1"], data["W"], data["H"])
+        runner = MicKeyRunner(self.cl_config_path, self.checkpoint_path)
+        R, t, inliers, pts1, pts2 = runner.run_one(
+            data["image0"].numpy(), data["image1"].numpy(), camera1, camera2
+        )
+        self.assertEqual(R.shape, (3, 3))
+        self.assertEqual(t.shape, (3,))
+        self.assertTrue(inliers > 0)
+        self.assertEqual(pts1.shape[1], 2)
+        self.assertEqual(pts1.shape, pts2.shape)

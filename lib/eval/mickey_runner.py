@@ -1,6 +1,7 @@
 import logging
 import os
 from collections import defaultdict
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
@@ -66,6 +67,32 @@ class MicKeyRunner:
                 estimated_poses[scene].append(estimated_pose)
 
         return estimated_poses
+
+    def run_one(
+        self, img1, img2, camera1, camera2
+    ) -> Optional[Tuple[np.ndarray, np.ndarray, int, np.ndarray, np.ndarray]]:
+        # Model expects batches, so make a batch of size 1
+        data = {}
+        data["image0"] = torch.from_numpy(img1).unsqueeze(0)
+        data["image1"] = torch.from_numpy(img2).unsqueeze(0)
+        data["K_color0"] = torch.from_numpy(camera1.K).unsqueeze(0)
+        data["K_color1"] = torch.from_numpy(camera2.K).unsqueeze(0)
+
+        data = data_to_model_device(data, self._model)
+        with torch.no_grad():
+            R, t = self._model(data)
+        # Move inliers to cpu, and return the 2D point correspondences
+        # Format of mickey inliers list seems to be:
+        # pt0, pt1, score, depth0, depth1
+        inliers = data["inliers_list"][0].cpu().numpy()
+        inliers_score = float(data["inliers"].cpu())
+        return (
+            R.squeeze().cpu().numpy(),
+            t.squeeze().cpu().numpy(),
+            inliers_score,
+            inliers[:, 0:2],
+            inliers[:, 2:4],
+        )
 
     # assuming validation dataset right now
     def run(self, dataloader: DataLoader) -> dict:
