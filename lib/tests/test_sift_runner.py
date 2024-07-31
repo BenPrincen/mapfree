@@ -41,8 +41,8 @@ class TestSiftRunner(unittest.TestCase):
         sift_runner = SiftRunner(config_path)
         # Get an item from the data set
         data = self._dataset[0]
-        img1 = (np.transpose(data["image0"].numpy(), (1, 2, 0)) * 255).astype(np.uint8)
-        img2 = (np.transpose(data["image1"].numpy(), (1, 2, 0)) * 255).astype(np.uint8)
+        img1 = data["image0"].numpy()
+        img2 = data["image1"].numpy()
         depth0 = data["depth0"].numpy()
         depth1 = data["depth1"].numpy()
         camera1 = Camera.from_K(data["K_color0"].numpy(), img1.shape[1], img1.shape[0])

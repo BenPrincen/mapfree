@@ -32,6 +32,9 @@ class SiftRunner(object):
         self, img1, img2, img1_depth, img2_depth, camera1, camera2, depth_scale
     ) -> Optional[Tuple[np.ndarray, np.ndarray, int, np.ndarray, np.ndarray]]:
         """Run the algorithm on a pair of images"""
+        # Convert from pytorch format
+        img1 = (np.transpose(img1, (1, 2, 0)) * 255).astype(np.uint8)
+        img2 = (np.transpose(img2, (1, 2, 0)) * 255).astype(np.uint8)
         kps = find_keypoints([img1, img2])
         kp1, des1 = kps[0]
         kp2, des2 = kps[1]
@@ -58,25 +61,21 @@ class SiftRunner(object):
         estimated_poses = defaultdict(list)
 
         for data in tqdm(data_loader):
-            img1 = (
-                np.transpose(data["image0"].numpy().squeeze(), (1, 2, 0)) * 255
-            ).astype(np.uint8)
-            img2 = (
-                np.transpose(data["image1"].numpy().squeeze(), (1, 2, 0)) * 255
-            ).astype(np.uint8)
-            camera1 = Camera.from_K(
-                data["K_color0"].numpy().squeeze(), img1.shape[1], img1.shape[0]
+            img0 = data["image0"].numpy().squeeze()
+            img1 = data["image1"].numpy().squeeze()
+            camera0 = Camera.from_K(
+                data["K_color0"].numpy().squeeze(), data["W"], data["H"]
             )
-            camera2 = Camera.from_K(
-                data["K_color1"].numpy().squeeze(), img2.shape[1], img2.shape[0]
+            camera1 = Camera.from_K(
+                data["K_color1"].numpy().squeeze(), data["W"], data["H"]
             )
             result = self.run_one(
+                img0,
                 img1,
-                img2,
                 data["depth0"].numpy().squeeze(),
                 data["depth1"].numpy().squeeze(),
+                camera0,
                 camera1,
-                camera2,
                 depth_scale=1.0,
             )
             if result is not None:
