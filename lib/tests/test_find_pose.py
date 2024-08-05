@@ -1,8 +1,10 @@
-import numpy as np
 import unittest
+
+import numpy as np
+
+from lib.find_pose import find_relative_pose, kabsch
 from lib.pose3 import Pose3
 from lib.rot3 import Rot3
-from lib.find_pose import kabsch, find_relative_pose
 
 
 class TestKabsch(unittest.TestCase):

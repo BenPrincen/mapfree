@@ -48,7 +48,6 @@ def load_poses(file: typing.IO, load_confidence: bool = False):
                 logging.info(f"Ignoring comment line in {file.name} line {line_number}")
                 continue
             frame_num = int(name[-9:-4])
-            print(f"frame_number: {frame_num}")
         except ValueError:
             logging.warning(
                 f"Invalid frame number in file {file.name} line {line_number}."

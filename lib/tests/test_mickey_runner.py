@@ -1,12 +1,14 @@
-from lib.eval.mickey_runner import MicKeyRunner
-from lib.dataset.mapfree import MapFreeDataset
-from lib.pose3 import Pose3
 import os
-from pathlib import Path
-from torch.utils.data import DataLoader
 import unittest
+from pathlib import Path
+
+from torch.utils.data import DataLoader
 from yacs.config import CfgNode as cfg
+
 from config.test.test_config import test_config
+from lib.dataset.mapfree import MapFreeDataset
+from lib.eval.mickey_runner import MicKeyRunner
+from lib.pose3 import Pose3
 
 
 @unittest.skipIf(test_config.ONLINE, "Should not run online")

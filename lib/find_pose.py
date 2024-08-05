@@ -54,6 +54,10 @@ def find_relative_pose(
     if len(pts1) != len(pts2):
         raise AttributeError("Length of points don't match")
 
+    if len(pts1) < num_matches:
+        # print("Min number of matches not met")
+        return None
+
     max_inliers = 0
     best_pose = None
     for it in range(0, ransac_iterations):

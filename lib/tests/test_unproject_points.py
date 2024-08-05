@@ -1,5 +1,7 @@
-import numpy as np
 import unittest
+
+import numpy as np
+
 from lib.camera import Camera
 from lib.unproject_points import unproject_points
 

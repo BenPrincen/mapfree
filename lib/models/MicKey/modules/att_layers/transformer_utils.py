@@ -1,17 +1,19 @@
-
 import torch
 import torch.nn as nn
+
 from lib.models.MicKey.modules.att_layers.attention import Attention
+
 
 class EncoderLayer(nn.Module):
     """
-        Transformer encoder layer containing the linear self and cross-attention, and the epipolar attention.
-        Arguments:
-            d_model: Feature dimension of the input feature maps (default: 128d).
-            nhead: Number of heads in the multi-head attention.
-            attention: Type of attention for the common transformer block. Options: linear, full.
+    Transformer encoder layer containing the linear self and cross-attention, and the epipolar attention.
+    Arguments:
+        d_model: Feature dimension of the input feature maps (default: 128d).
+        nhead: Number of heads in the multi-head attention.
+        attention: Type of attention for the common transformer block. Options: linear, full.
     """
-    def __init__(self, d_model, nhead, attention='linear'):
+
+    def __init__(self, d_model, nhead, attention="linear"):
         super(EncoderLayer, self).__init__()
 
         # Transformer encoder layer parameters
@@ -28,9 +30,9 @@ class EncoderLayer(nn.Module):
 
         # feed-forward network
         self.mlp = nn.Sequential(
-            nn.Linear(d_model*2, d_model*2, bias=False),
+            nn.Linear(d_model * 2, d_model * 2, bias=False),
             nn.ReLU(True),
-            nn.Linear(d_model*2, d_model, bias=False),
+            nn.Linear(d_model * 2, d_model, bias=False),
         )
 
         # norm and dropout

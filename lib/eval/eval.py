@@ -51,9 +51,6 @@ class Eval:
         estimated_poses:
             keys: scene id's
             values: list of poses where an example of a list elem is [Pose3, confidence, query_img]
-        ground_truth_poses:
-            keys: scene id's
-            values: example of a list elem is [(quaternion), (translation)] without confidence
         """
 
         def preprocessPosesIntrinsics(estimated_poses: dict) -> dict:
@@ -61,7 +58,7 @@ class Eval:
             for k, v in estimated_poses.items():
                 for est_info in v:
                     pose3, conf, frame_num = est_info
-                    q, t = pose3.rotation.getQuat().squeeze(), pose3.translation
+                    q, t = pose3.rotation.get_quat().squeeze(), pose3.translation
                     new_estimated_poses[k].append((q, t, conf))
             return new_estimated_poses
 
