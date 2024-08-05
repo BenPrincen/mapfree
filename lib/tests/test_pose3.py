@@ -1,5 +1,6 @@
-import numpy as np
 import unittest
+
+import numpy as np
 
 from lib.pose3 import Pose3
 from lib.rot3 import Rot3

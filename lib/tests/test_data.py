@@ -1,8 +1,10 @@
-from lib.dataset.mapfree import MapFreeDataset
-import unittest
 import os
+import unittest
+
 from torch.utils.data import DataLoader
 from yacs.config import CfgNode as cfg
+
+from lib.dataset.mapfree import MapFreeDataset
 
 
 class TestDataLoader(unittest.TestCase):

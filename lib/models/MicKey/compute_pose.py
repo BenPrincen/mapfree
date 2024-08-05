@@ -1,7 +1,10 @@
 import pytorch_lightning as pl
 
 from lib.models.MicKey.modules.compute_correspondences import ComputeCorrespondences
-from lib.models.MicKey.modules.utils.probabilisticProcrustes import e2eProbabilisticProcrustesSolver
+from lib.models.MicKey.modules.utils.probabilisticProcrustes import (
+    e2eProbabilisticProcrustesSolver,
+)
+
 
 class MickeyRelativePose(pl.LightningModule):
     # Compute the metric relative pose between two input images, with given intrinsics (for the pose solver).
@@ -20,14 +23,16 @@ class MickeyRelativePose(pl.LightningModule):
     def forward(self, data):
 
         self.compute_matches(data)
-        data['final_scores'] = data['scores'] * data['kp_scores']
+        data["final_scores"] = data["scores"] * data["kp_scores"]
 
-        R, t, inliers, inliers_list = self.e2e_Procrustes.estimate_pose(data, return_inliers=True)
+        R, t, inliers, inliers_list = self.e2e_Procrustes.estimate_pose(
+            data, return_inliers=True
+        )
 
-        data['R'] = R
-        data['t'] = t
-        data['inliers'] = inliers
-        data['inliers_list'] = inliers_list
+        data["R"] = R
+        data["t"] = t
+        data["inliers"] = inliers
+        data["inliers_list"] = inliers_list
 
         return R, t
 
@@ -38,9 +43,10 @@ class MickeyRelativePose(pl.LightningModule):
 
         # Recover DINOv2 features from pretrained weights.
         for param_tensor in self.compute_matches.state_dict():
-            if 'dinov2'in param_tensor:
-                checkpoint['state_dict']['compute_matches.'+param_tensor] = \
-                    self.compute_matches.state_dict()[param_tensor]
+            if "dinov2" in param_tensor:
+                checkpoint["state_dict"][
+                    "compute_matches." + param_tensor
+                ] = self.compute_matches.state_dict()[param_tensor]
 
     def is_eval_model(self, is_eval):
         if is_eval:

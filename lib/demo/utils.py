@@ -1,12 +1,19 @@
+from pathlib import Path
+
+import cv2
+import numpy as np
 import torch
 import argparse
-from lib.models.builder import build_model
-from lib.dataset.utils import correct_intrinsic_scale
-from lib.models.MicKey.modules.utils.training_utils import colorize, generate_heat_map
-from config.default import cfg
-import numpy as np
 from pathlib import Path
+
 import cv2
+import numpy as np
+import torch
+
+from config.default import cfg
+from lib.dataset.utils import correct_intrinsic_scale
+from lib.models.builder import build_model
+from lib.models.MicKey.modules.utils.training_utils import colorize, generate_heat_map
 
 
 def prepare_score_map(scs, img, temperature=0.5):
@@ -17,6 +24,18 @@ def prepare_score_map(scs, img, temperature=0.5):
 
     return score_map
 
+
+def colorize_depth(
+    value,
+    vmin=None,
+    vmax=None,
+    cmap="magma_r",
+    invalid_val=-99,
+    invalid_mask=None,
+    background_color=(0, 0, 0, 255),
+    gamma_corrected=False,
+    value_transform=None,
+):
 
 def colorize_depth(
     value,
@@ -41,6 +60,17 @@ def colorize_depth(
         gamma_corrected,
         value_transform,
     )
+    img = colorize(
+        value,
+        vmin,
+        vmax,
+        cmap,
+        invalid_val,
+        invalid_mask,
+        background_color,
+        gamma_corrected,
+        value_transform,
+    )
 
     shape_im = img.shape
     img = np.asarray(img, np.uint8)
@@ -48,8 +78,12 @@ def colorize_depth(
     img = cv2.resize(
         img, (shape_im[1] * 14, shape_im[0] * 14), interpolation=cv2.INTER_LINEAR
     )
+    img = cv2.resize(
+        img, (shape_im[1] * 14, shape_im[0] * 14), interpolation=cv2.INTER_LINEAR
+    )
 
     return img
+
 
 
 def read_color_image(path, resize):
@@ -72,13 +106,17 @@ def read_color_image(path, resize):
     return image.unsqueeze(0)
 
 
+
 def read_intrinsics(path_intrinsics, resize):
     Ks = {}
     with Path(path_intrinsics).open("r") as f:
+    with Path(path_intrinsics).open("r") as f:
         for line in f.readlines():
+            if "#" in line:
             if "#" in line:
                 continue
 
+            line = line.strip().split(" ")
             line = line.strip().split(" ")
             img_name = line[0]
             fx, fy, cx, cy, W, H = map(float, line[1:])
@@ -90,10 +128,12 @@ def read_intrinsics(path_intrinsics, resize):
     return Ks
 
 
+
 def run_demo_inference(args):
 
     # Select device
     use_cuda = torch.cuda.is_available()
+    device = torch.device("cuda:0" if use_cuda else "cpu")
     device = torch.device("cuda:0" if use_cuda else "cpu")
 
     print("Preparing data...")

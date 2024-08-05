@@ -3,15 +3,92 @@
 from pathlib import Path
 
 import numpy as np
+import pytorch_lightning as pl
 import torch
 import torch.utils.data as data
+from torch.utils.data import DataLoader
+from torchvision.transforms import ColorJitter, Grayscale
 from transforms3d.quaternions import qinverse, qmult, quat2mat, rotate_vector
 
+from lib.dataset.sampler import RandomConcatSampler
 from lib.dataset.utils import (
     correct_intrinsic_scale,
     read_color_image,
     read_depth_image,
 )
+
+
+class DataModuleTraining(pl.LightningDataModule):
+    def __init__(self, cfg):
+        super().__init__()
+        self.cfg = cfg
+        self.seed = cfg.DATASET.SEED
+
+        datasets = {"MapFree": MapFreeDataset}
+
+        assert (
+            cfg.DATASET.DATA_SOURCE in datasets.keys()
+        ), "invalid DATA_SOURCE, this dataset is not implemented"
+        self.dataset_type = datasets[cfg.DATASET.DATA_SOURCE]
+
+    def get_sampler(self, dataset, reset_epoch=False, seed=66):
+        if self.cfg.TRAINING.SAMPLER == "scene_balance":
+            sampler = RandomConcatSampler(
+                dataset,
+                self.cfg.TRAINING.N_SAMPLES_SCENE,
+                self.cfg.TRAINING.SAMPLE_WITH_REPLACEMENT,
+                shuffle=True,
+                reset_on_iter=reset_epoch,
+                seed=seed,
+            )
+        else:
+            sampler = None
+        return sampler
+
+    def train_dataloader(self):
+        transforms = (
+            ColorJitter()
+            if self.cfg.DATASET.AUGMENTATION_TYPE == "colorjitter"
+            else None
+        )
+        transforms = (
+            Grayscale(num_output_channels=3)
+            if self.cfg.DATASET.BLACK_WHITE
+            else transforms
+        )
+
+        dataset = self.dataset_type(self.cfg, "train", transforms=transforms)
+        sampler = self.get_sampler(dataset, seed=self.seed)
+        dataloader = DataLoader(
+            dataset,
+            batch_size=self.cfg.TRAINING.BATCH_SIZE,
+            num_workers=self.cfg.TRAINING.NUM_WORKERS,
+            sampler=sampler,
+        )
+        return dataloader
+
+    def val_dataloader(self):
+        dataset = self.dataset_type(self.cfg, "val")
+        sampler = self.get_sampler(dataset, reset_epoch=True)
+        # sampler = None
+        dataloader = DataLoader(
+            dataset,
+            batch_size=self.cfg.TRAINING.BATCH_SIZE,
+            num_workers=self.cfg.TRAINING.NUM_WORKERS,
+            sampler=sampler,
+            drop_last=True,
+        )
+        return dataloader
+
+    def test_dataloader(self):
+        dataset = self.dataset_type(self.cfg, "test")
+        dataloader = DataLoader(
+            dataset,
+            batch_size=self.cfg.TRAINING.BATCH_SIZE,
+            num_workers=self.cfg.TRAINING.NUM_WORKERS,
+            shuffle=False,
+        )
+        return dataloader
 
 
 class MapFreeScene(data.Dataset):

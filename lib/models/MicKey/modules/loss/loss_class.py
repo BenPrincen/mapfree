@@ -1,10 +1,18 @@
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 
-from lib.models.MicKey.modules.utils.training_utils import backproject_3d, soft_inlier_counting_3d, inlier_counting_3d
-from lib.models.MicKey.modules.loss.loss_utils import compute_pose_loss, compute_vcre_loss
+from lib.models.MicKey.modules.loss.loss_utils import (
+    compute_pose_loss,
+    compute_vcre_loss,
+)
 from lib.models.MicKey.modules.loss.solvers import weighted_procrustes
+from lib.models.MicKey.modules.utils.training_utils import (
+    backproject_3d,
+    inlier_counting_3d,
+    soft_inlier_counting_3d,
+)
+
 
 class MetricPoseLoss(nn.Module):
     """
@@ -12,6 +20,7 @@ class MetricPoseLoss(nn.Module):
     MetricPoseLoss computes the gradients for the REINFORCE algorithm as well as providing a direct signal
     to learn the 3D keypoint coordiantes, ie, 2D offsets + depths.
     """
+
     def __init__(self, cfg):
         super().__init__()
 
@@ -25,13 +34,13 @@ class MetricPoseLoss(nn.Module):
         self.loss_type = cfg.LOSS_CLASS.LOSS_FUNCTION
         self.soft_clipping = cfg.LOSS_CLASS.SOFT_CLIPPING
 
-        if self.loss_type == 'POSE_ERR':
+        if self.loss_type == "POSE_ERR":
             self.compute_loss = compute_pose_loss
             if self.soft_clipping:
                 self.max_loss_null = cfg.LOSS_CLASS.POSE_ERR.MAX_LOSS_SOFTVALUE
             else:
                 self.max_loss_null = cfg.LOSS_CLASS.POSE_ERR.MAX_LOSS_VALUE
-        elif self.loss_type == 'VCRE':
+        elif self.loss_type == "VCRE":
             self.compute_loss = compute_vcre_loss
             if self.soft_clipping:
                 self.max_loss_null = cfg.LOSS_CLASS.VCRE.MAX_LOSS_SOFTVALUE
@@ -56,8 +65,10 @@ class MetricPoseLoss(nn.Module):
         self.th_outliers = cfg.LOSS_CLASS.NULL_HYPOTHESIS.TH_OUTLIERS
 
         # Curriculum learning
-        self.train_w_top = cfg.LOSS_CLASS.CURRICULUM_LEARNING.TRAIN_WITH_TOPK or \
-                           cfg.LOSS_CLASS.CURRICULUM_LEARNING.TRAIN_CURRICULUM
+        self.train_w_top = (
+            cfg.LOSS_CLASS.CURRICULUM_LEARNING.TRAIN_WITH_TOPK
+            or cfg.LOSS_CLASS.CURRICULUM_LEARNING.TRAIN_CURRICULUM
+        )
         if cfg.LOSS_CLASS.CURRICULUM_LEARNING.TRAIN_CURRICULUM:
             self.topK = cfg.LOSS_CLASS.CURRICULUM_LEARNING.TOPK_INIT
         elif cfg.LOSS_CLASS.CURRICULUM_LEARNING.TRAIN_WITH_TOPK:
@@ -66,19 +77,25 @@ class MetricPoseLoss(nn.Module):
     def read_pose_parameters(self, batch):
         # Auxiliary funciton to read the pose and intrinsic parameters
 
-        Rgt = batch['T_0to1'][:, :3, :3]
-        tgt = batch['T_0to1'][:, :3, 3:].transpose(1, 2)
-        K0 = batch['K_color0'].float()
-        K1 = batch['K_color1'].float()
+        Rgt = batch["T_0to1"][:, :3, :3]
+        tgt = batch["T_0to1"][:, :3, 3:].transpose(1, 2)
+        K0 = batch["K_color0"].float()
+        K1 = batch["K_color1"].float()
 
         return Rgt, tgt, K0, K1
 
     def forward(self, batch):
 
         # Detach output of the network and accumulate gradients (later use for the direct signal, ie, 3D coordinates)
-        matches = batch['final_scores'].detach()
-        kps0, depth0 = batch['kps0'].detach().requires_grad_(), batch['depth_kp0'].detach().requires_grad_()
-        kps1, depth1 = batch['kps1'].detach().requires_grad_(), batch['depth_kp1'].detach().requires_grad_()
+        matches = batch["final_scores"].detach()
+        kps0, depth0 = (
+            batch["kps0"].detach().requires_grad_(),
+            batch["depth_kp0"].detach().requires_grad_(),
+        )
+        kps1, depth1 = (
+            batch["kps1"].detach().requires_grad_(),
+            batch["depth_kp1"].detach().requires_grad_(),
+        )
 
         # Define ground truth pose parameters
         Rgt, tgt, K0, K1 = self.read_pose_parameters(batch)
@@ -88,9 +105,13 @@ class MetricPoseLoss(nn.Module):
         num_corr_3d_3d = self.num_corr_3d_3d
 
         # Reshape to sample from matches matrix
-        matches_row = matches.reshape(B, num_kpts*num_kpts)
-        batch_idx = torch.tile(torch.arange(B).view(B, 1), [1, self.num_samples_matches]).reshape(B, self.num_samples_matches)
-        batch_idx_ransac = torch.tile(torch.arange(B).view(B, 1), [1, num_corr_3d_3d]).reshape(B, num_corr_3d_3d)
+        matches_row = matches.reshape(B, num_kpts * num_kpts)
+        batch_idx = torch.tile(
+            torch.arange(B).view(B, 1), [1, self.num_samples_matches]
+        ).reshape(B, self.num_samples_matches)
+        batch_idx_ransac = torch.tile(
+            torch.arange(B).view(B, 1), [1, num_corr_3d_3d]
+        ).reshape(B, num_corr_3d_3d)
 
         # Auxiliary variables to accumulate losses
         losses = []
@@ -110,21 +131,26 @@ class MetricPoseLoss(nn.Module):
             gradients_tmp = torch.zeros_like(matches_row)
 
             # Check if matching matrix has any invalid value
-            invalid_matches = (torch.isnan(matches_row).any() or torch.isinf(matches_row).any() or
-                               (matches_row < 0.).any() or (matches_row.sum(-1) < 0.).any() or (matches_row.sum() < 0.).any())
+            invalid_matches = (
+                torch.isnan(matches_row).any()
+                or torch.isinf(matches_row).any()
+                or (matches_row < 0.0).any()
+                or (matches_row.sum(-1) < 0.0).any()
+                or (matches_row.sum() < 0.0).any()
+            )
             if invalid_matches:
-                print('Invalid matching matrix! ')
+                print("Invalid matching matrix! ")
                 break
 
             # Use matching probabilities to guide the sampling step
             try:
                 sampled_idx = torch.multinomial(matches_row, self.num_samples_matches)
             except:
-                print('[Except Reached]: Invalid matching matrix! ')
+                print("[Except Reached]: Invalid matching matrix! ")
                 break
 
-            sampled_idx_kp0 = torch.div(sampled_idx, num_kpts, rounding_mode='trunc')
-            sampled_idx_kp1 = (sampled_idx % num_kpts)
+            sampled_idx_kp0 = torch.div(sampled_idx, num_kpts, rounding_mode="trunc")
+            sampled_idx_kp1 = sampled_idx % num_kpts
 
             # Sample the positions according to the sample ids
             cor0 = kps0[batch_idx, :2, sampled_idx_kp0]
@@ -149,7 +175,9 @@ class MetricPoseLoss(nn.Module):
                 try:
                     sampled_idx_ransac = torch.multinomial(weights, num_corr_3d_3d)
                 except:
-                    print('[Except Reached]: Invalid matching matrix: torch.multinomial(weights, num_corr_3d_3d)')
+                    print(
+                        "[Except Reached]: Invalid matching matrix: torch.multinomial(weights, num_corr_3d_3d)"
+                    )
                     break
 
                 # Sample the 3D-3D correspondences
@@ -158,21 +186,25 @@ class MetricPoseLoss(nn.Module):
                 weights_k = weights[batch_idx_ransac, sampled_idx_ransac]
 
                 # get metric relative pose
-                R_pre, t_pre, ok_rank = weighted_procrustes(X_k, Y_k, weights_k, use_weights=False)
+                R_pre, t_pre, ok_rank = weighted_procrustes(
+                    X_k, Y_k, weights_k, use_weights=False
+                )
 
                 # Check whether the relative pose is generated correctly
                 if not ok_rank:
                     continue
 
                 # Skip any invalid pose
-                invalid_t = (torch.isnan(t_pre).any() or torch.isinf(t_pre).any())
-                invalid_R = (torch.isnan(R_pre).any() or torch.isinf(R_pre).any())
+                invalid_t = torch.isnan(t_pre).any() or torch.isinf(t_pre).any()
+                invalid_R = torch.isnan(R_pre).any() or torch.isinf(R_pre).any()
 
                 if invalid_t or invalid_R:
                     continue
 
                 # Compute hypothesis score
-                score_k = soft_inlier_counting_3d(X, Y, R_pre, t_pre, th=self.inlier_3d_th)
+                score_k = soft_inlier_counting_3d(
+                    X, Y, R_pre, t_pre, th=self.inlier_3d_th
+                )
 
                 # Start refinement process
                 # Avoid gradients through refinement
@@ -180,7 +212,9 @@ class MetricPoseLoss(nn.Module):
                     # Compute first the mask for inlier correspondences - Use more restrictive th each iteration?
                     th_ref = self.num_ref_steps * [self.inlier_ref_th]
                     inliers_pre = torch.zeros((B,)).to(X.device)
-                    inliers_ref = torch.zeros((B, self.num_samples_matches)).to(X.device)
+                    inliers_ref = torch.zeros((B, self.num_samples_matches)).to(
+                        X.device
+                    )
                     inliers_ref[batch_idx_ransac, sampled_idx_ransac] = 1
                     R_detach, t_detach = R_pre.clone().detach(), t_pre.clone().detach()
 
@@ -188,36 +222,54 @@ class MetricPoseLoss(nn.Module):
                     for i_ref in range(len(th_ref)):
 
                         # Find the 3D inliers for the candidate relative pose
-                        inliers = inlier_counting_3d(X, Y, R_detach, t_detach, th=th_ref[i_ref])
-                        do_ref = (inliers.sum(-1) >= self.num_corr_3d_3d) * (inliers.sum(-1) > inliers_pre)
+                        inliers = inlier_counting_3d(
+                            X, Y, R_detach, t_detach, th=th_ref[i_ref]
+                        )
+                        do_ref = (inliers.sum(-1) >= self.num_corr_3d_3d) * (
+                            inliers.sum(-1) > inliers_pre
+                        )
                         inliers_pre = inliers.sum(-1)
 
                         # Check whether any refinements need to be done
-                        if (do_ref.sum().float() == 0.).item():
+                        if (do_ref.sum().float() == 0.0).item():
                             break
 
                         # Use all inliers to compute the new pose
                         inliers_ref[do_ref] = inliers[do_ref]
-                        R_detach[do_ref], t_detach[do_ref], _ = weighted_procrustes(X[do_ref], Y[do_ref], use_mask=True,
-                                                                              use_weights=True, check_rank = False,
-                                                                              w=inliers_ref[do_ref])
+                        R_detach[do_ref], t_detach[do_ref], _ = weighted_procrustes(
+                            X[do_ref],
+                            Y[do_ref],
+                            use_mask=True,
+                            use_weights=True,
+                            check_rank=False,
+                            w=inliers_ref[do_ref],
+                        )
 
                 # Recompute the pose with the final set of inliers. This time, gradients are accumulated
-                R, t, ok_rank = weighted_procrustes(X, Y, use_weights=True, use_mask=True, w=inliers_ref)
+                R, t, ok_rank = weighted_procrustes(
+                    X, Y, use_weights=True, use_mask=True, w=inliers_ref
+                )
 
                 # Check whether the relative pose is generated correctly
                 if not ok_rank:
                     continue
 
                 # Skip any invalid pose
-                invalid_t = (torch.isnan(t_pre).any() or torch.isinf(t_pre).any())
-                invalid_R = (torch.isnan(R_pre).any() or torch.isinf(R_pre).any())
+                invalid_t = torch.isnan(t_pre).any() or torch.isinf(t_pre).any()
+                invalid_R = torch.isnan(R_pre).any() or torch.isinf(R_pre).any()
 
                 if invalid_t or invalid_R:
                     continue
 
                 # Compute the loss of the estimated pose wrt to ground truth
-                loss_value_k, loss_rot_k, loss_trans_k = self.compute_loss(R, t, Rgt, tgt, batch['Kori_color0'], soft_clipping=self.soft_clipping)
+                loss_value_k, loss_rot_k, loss_trans_k = self.compute_loss(
+                    R,
+                    t,
+                    Rgt,
+                    tgt,
+                    batch["Kori_color0"],
+                    soft_clipping=self.soft_clipping,
+                )
 
                 # Accumulate the loss values
                 losses_ransac = torch.cat([losses_ransac, loss_value_k], -1)
@@ -227,17 +279,40 @@ class MetricPoseLoss(nn.Module):
 
             # Aggregate the losses based on their soft inlier counting (score)
             if scores_ransac.shape[1] > 0:
-                loss_rot = (losses_R_ransac * torch.softmax(scores_ransac / self.score_temperature, -1)).sum(-1).unsqueeze(-1)
-                loss_trans = (losses_t_ransac * torch.softmax(scores_ransac / self.score_temperature, -1)).sum(-1).unsqueeze(-1)
+                loss_rot = (
+                    (
+                        losses_R_ransac
+                        * torch.softmax(scores_ransac / self.score_temperature, -1)
+                    )
+                    .sum(-1)
+                    .unsqueeze(-1)
+                )
+                loss_trans = (
+                    (
+                        losses_t_ransac
+                        * torch.softmax(scores_ransac / self.score_temperature, -1)
+                    )
+                    .sum(-1)
+                    .unsqueeze(-1)
+                )
 
                 if self.add_null_hypothesis:
-                    null_score = (self.th_outliers * self.num_samples_matches) * torch.ones((B, 1)).to(kps0.device)
+                    null_score = (
+                        self.th_outliers * self.num_samples_matches
+                    ) * torch.ones((B, 1)).to(kps0.device)
                     null_loss = self.max_loss_null * torch.ones((B, 1)).to(kps0.device)
                     losses_ransac = torch.cat([losses_ransac, null_loss], -1)
                     scores_ransac = torch.cat([scores_ransac, null_score], -1)
 
                 # Compute the final loss value for this REINFORCE iteration
-                loss_value = (losses_ransac * torch.softmax(scores_ransac/self.score_temperature, -1)).sum(-1).unsqueeze(-1)
+                loss_value = (
+                    (
+                        losses_ransac
+                        * torch.softmax(scores_ransac / self.score_temperature, -1)
+                    )
+                    .sum(-1)
+                    .unsqueeze(-1)
+                )
 
                 # gradient tensor of the current REINFORCE iteration
                 gradients_b[batch_idx, sampled_idx] += 1
@@ -266,11 +341,11 @@ class MetricPoseLoss(nn.Module):
 
         # Check if no valid poses were generated
         if num_valid_h == 0:
-            print('[ERROR]: No valid hypotheses generated!')
+            print("[ERROR]: No valid hypotheses generated!")
 
         # If curriculum learning select the top K image pairs
-        if self.train_w_top and B>1:
-            select_topB =  np.maximum(int(B * self.topK / 100), 1)
+        if self.train_w_top and B > 1:
+            select_topB = np.maximum(int(B * self.topK / 100), 1)
 
             topk_loss = baseline[torch.argsort(baseline)[select_topB]]
             mask_topk = (baseline < topk_loss).float()
@@ -283,16 +358,15 @@ class MetricPoseLoss(nn.Module):
 
         # Store metrics:
         outputs = {}
-        outputs['avg_loss_rot'] = torch.mean(losses_rot)
-        outputs['avg_loss_trans'] = torch.mean(losses_trans)
-        outputs['avg_rot_errs'] = torch.mean(torch.rad2deg(torch.as_tensor(losses_rot)))
-        outputs['avg_t_errs'] = torch.mean(losses_trans)
-        outputs['kps0'] = kps0
-        outputs['kps1'] = kps1
-        outputs['depth0'] = depth0
-        outputs['depth1'] = depth1
-        outputs['mask_topk'] = mask_topk
+        outputs["avg_loss_rot"] = torch.mean(losses_rot)
+        outputs["avg_loss_trans"] = torch.mean(losses_trans)
+        outputs["avg_rot_errs"] = torch.mean(torch.rad2deg(torch.as_tensor(losses_rot)))
+        outputs["avg_t_errs"] = torch.mean(losses_trans)
+        outputs["kps0"] = kps0
+        outputs["kps1"] = kps1
+        outputs["depth0"] = depth0
+        outputs["depth1"] = depth1
+        outputs["mask_topk"] = mask_topk
         gradients = gradients.reshape(B, num_kpts, num_kpts)
 
         return avg_loss, outputs, [gradients], num_valid_h
-
