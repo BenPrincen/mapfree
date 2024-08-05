@@ -5,13 +5,11 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-import sys
 from copy import deepcopy
 
 import numpy as np
 import skimage.io as io
 import torch
-import torchvision
 from silk.backbones.silk.silk import SiLKVGG as SiLK
 from silk.backbones.superpoint.vgg import ParametricVGG
 from silk.config.model import load_model_from_checkpoint

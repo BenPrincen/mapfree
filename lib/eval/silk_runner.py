@@ -87,7 +87,7 @@ class SilkRunner:
         )
         if output == None:
             return None
-        (R, t), inliers = output
+        (R, t), inliers, pt1, pt2 = output
         return R, t, inliers
 
     def run(self, data_loader: DataLoader) -> dict:
