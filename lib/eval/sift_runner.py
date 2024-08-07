@@ -29,7 +29,14 @@ class SiftRunner(object):
         self._min_num_matches = self._config.SIFT.MIN_NUM_MATCHES
 
     def run_one(
-        self, img1, img2, img1_depth, img2_depth, camera1, camera2, depth_scale
+        self,
+        img1: np.ndarray,
+        img2: np.ndarray,
+        img1_depth: np.ndarray,
+        img2_depth: np.ndarray,
+        camera1: Camera,
+        camera2: Camera,
+        depth_scale: float = 1000,
     ) -> Optional[Tuple[np.ndarray, np.ndarray, int, np.ndarray, np.ndarray]]:
         """Run the algorithm on a pair of images"""
         # Convert from pytorch format
