@@ -1,0 +1,5 @@
+SILK:
+  NUM_MATCHES: 3          # Number of matches used to solve for pose
+  RANSAC_ITERATIONS: 100  # Number of RANSAC iterations to find best pose
+  INLIER_THRESHOLD: 0.15  # Inlier threshold when counting inliers
+  MIN_NUM_MATCHES: 10     # Minimum nubmer of matches for valid solution

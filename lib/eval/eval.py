@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+from tqdm import tqdm
 from transforms3d.quaternions import rotate_vector
 
 from lib.dataset.mapfree import MapFreeDataset
@@ -25,7 +26,7 @@ class Eval:
 
         results = defaultdict(list)
         metricmanager = MetricManager()
-        for i in range(len(estimated_poses)):
+        for i in tqdm(range(len(estimated_poses))):
             q_est, t_est, confidence = estimated_poses[i]
             q_gt, t_gt = ground_truth_poses[i]
             inputs = Inputs(
@@ -105,8 +106,7 @@ class Eval:
         list_ws = []
         list_hs = []
         scenes = preprocessed_estimated_poses.keys()
-        for scene in scenes:
-            l = len(preprocessed_estimated_poses[scene])
+        for scene in tqdm(scenes):
             list_est_poses += preprocessed_estimated_poses[scene]
             list_gt_poses += gt_poses[scene]
             list_ks += Ks[scene]
